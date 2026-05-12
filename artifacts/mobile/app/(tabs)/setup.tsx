@@ -1,8 +1,10 @@
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -61,19 +63,12 @@ function InputField({
         {label}
       </Text>
       <Animated.View
-        style={[
-          styles.inputRow,
-          {
-            backgroundColor: colors.card,
-            borderColor,
-          },
-        ]}
+        style={[styles.inputRow, { backgroundColor: colors.card, borderColor }]}
       >
         <Feather
           name={icon as "user"}
           size={20}
           color={focused ? colors.primary : colors.mutedForeground}
-          style={styles.inputIcon}
         />
         <TextInput
           value={value}
@@ -83,12 +78,82 @@ function InputField({
           keyboardType={keyboardType ?? "default"}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          style={[
-            styles.input,
-            { color: colors.text, fontFamily: "Nunito_400Regular" },
-          ]}
+          style={[styles.input, { color: colors.text, fontFamily: "Nunito_400Regular" }]}
         />
       </Animated.View>
+    </View>
+  );
+}
+
+function PhotoPicker({
+  uri,
+  onPick,
+  label,
+  fallbackIcon,
+}: {
+  uri: string | null;
+  onPick: (uri: string) => void;
+  label: string;
+  fallbackIcon: string;
+}) {
+  const colors = useColors();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePress = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      onPick(result.assets[0].uri);
+    }
+  };
+
+  const handlePressIn = () =>
+    Animated.spring(scale, { toValue: 0.93, useNativeDriver: true }).start();
+  const handlePressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+
+  return (
+    <View style={styles.photoPicker}>
+      <Text
+        style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}
+      >
+        {label}
+      </Text>
+
+      <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
+        <Animated.View
+          style={[
+            styles.photoCircle,
+            { borderColor: uri ? colors.primary : colors.border, transform: [{ scale }] },
+          ]}
+        >
+          {uri ? (
+            <Image source={{ uri }} style={styles.photoImage} />
+          ) : (
+            <View style={[styles.photoPlaceholder, { backgroundColor: colors.accent }]}>
+              <Feather name={fallbackIcon as "user"} size={36} color={colors.mutedForeground} />
+            </View>
+          )}
+
+          <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
+            <Feather name="camera" size={14} color="#fff" />
+          </View>
+        </Animated.View>
+      </Pressable>
+
+      <Text
+        style={[styles.photoHint, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}
+      >
+        {uri ? "Нажмите, чтобы изменить" : "Нажмите, чтобы выбрать фото"}
+      </Text>
     </View>
   );
 }
@@ -101,26 +166,28 @@ export default function SetupScreen() {
   const isEdit = params.edit === "1";
   const {
     role,
-    parentName,
-    setParentName,
-    parentPhone,
-    setParentPhone,
-    childName,
-    setChildName,
+    parentName, setParentName,
+    parentPhone, setParentPhone,
+    childName, setChildName,
+    parentPhotoUri, setParentPhotoUri,
+    childPhotoUri, setChildPhotoUri,
   } = useApp();
 
   const activeRole = (params.role as "parent" | "child") ?? role;
+  const isParent = activeRole === "parent";
 
   const [localParentName, setLocalParentName] = useState(parentName);
   const [localChildName, setLocalChildName] = useState(childName);
   const [localPhone, setLocalPhone] = useState(parentPhone);
-
-  const isParent = activeRole === "parent";
+  const [localParentPhoto, setLocalParentPhoto] = useState<string | null>(parentPhotoUri);
+  const [localChildPhoto, setLocalChildPhoto] = useState<string | null>(childPhotoUri);
 
   const handleSave = () => {
     setParentName(localParentName.trim() || "Мама");
     setChildName(localChildName.trim() || "Маша");
     setParentPhone(localPhone.trim() || "+7 900 000 0000");
+    setParentPhotoUri(localParentPhoto);
+    setChildPhotoUri(localChildPhoto);
     if (isEdit) {
       router.back();
     } else if (isParent) {
@@ -149,52 +216,37 @@ export default function SetupScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color={colors.text} />
         </Pressable>
-        <Text
-          style={[
-            styles.headerTitle,
-            { color: colors.text, fontFamily: "Nunito_700Bold" },
-          ]}
-        >
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
           {isEdit ? "Изменить данные" : "Знакомство"}
         </Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 40 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={[
-            styles.iconRow,
-            { backgroundColor: colors.accent },
-          ]}
-        >
-          <Feather
-            name={isParent ? "phone-call" : "heart"}
-            size={40}
-            color={colors.text}
+        {isParent ? (
+          <PhotoPicker
+            uri={localChildPhoto}
+            onPick={setLocalChildPhoto}
+            label="Фото ребёнка"
+            fallbackIcon="user"
           />
-        </View>
+        ) : (
+          <PhotoPicker
+            uri={localParentPhoto}
+            onPick={setLocalParentPhoto}
+            label="Фото родителя"
+            fallbackIcon="user"
+          />
+        )}
 
-        <Text
-          style={[
-            styles.title,
-            { color: colors.text, fontFamily: "Nunito_800ExtraBold" },
-          ]}
-        >
+        <Text style={[styles.title, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
           {isParent ? "Настройка для родителя" : "Настройка для ребёнка"}
         </Text>
-        <Text
-          style={[
-            styles.subtitle,
-            { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" },
-          ]}
-        >
+        <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
           {isParent
             ? "Введите имя вашего ребёнка и его номер телефона"
             : "Введите имя родителя и его номер телефона"}
@@ -237,20 +289,11 @@ export default function SetupScreen() {
           <Animated.View
             style={[
               styles.saveBtn,
-              {
-                backgroundColor: canSave ? colors.primary : colors.muted,
-                transform: [{ scale: btnScale }],
-              },
+              { backgroundColor: canSave ? colors.primary : colors.muted, transform: [{ scale: btnScale }] },
             ]}
           >
-            <Feather
-              name={isEdit ? "check" : "arrow-right"}
-              size={22}
-              color="#fff"
-            />
-            <Text
-              style={[styles.saveBtnText, { fontFamily: "Nunito_700Bold" }]}
-            >
+            <Feather name={isEdit ? "check" : "arrow-right"} size={22} color="#fff" />
+            <Text style={[styles.saveBtnText, { fontFamily: "Nunito_700Bold" }]}>
               {isEdit ? "Сохранить" : "Готово, начинаем!"}
             </Text>
           </Animated.View>
@@ -269,12 +312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 8,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 20 },
   content: {
     paddingHorizontal: 24,
@@ -282,28 +320,9 @@ const styles = StyleSheet.create({
     gap: 20,
     alignItems: "center",
   },
-  iconRow: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 28,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 18,
-    textAlign: "center",
-    lineHeight: 26,
-  },
-  fields: {
-    width: "100%",
-    gap: 16,
-    marginTop: 8,
-  },
+  title: { fontSize: 26, textAlign: "center" },
+  subtitle: { fontSize: 17, textAlign: "center", lineHeight: 26 },
+  fields: { width: "100%", gap: 16 },
   fieldWrapper: { gap: 6 },
   fieldLabel: { fontSize: 16, marginLeft: 4 },
   inputRow: {
@@ -315,12 +334,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
-  inputIcon: {},
-  input: {
-    flex: 1,
-    fontSize: 20,
-    padding: 0,
-  },
+  input: { flex: 1, fontSize: 20, padding: 0 },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -337,4 +351,39 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   saveBtnText: { fontSize: 22, color: "#fff" },
+
+  photoPicker: { alignItems: "center", gap: 10 },
+  photoCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    overflow: "visible",
+    position: "relative",
+  },
+  photoImage: {
+    width: 114,
+    height: 114,
+    borderRadius: 57,
+  },
+  photoPlaceholder: {
+    width: 114,
+    height: 114,
+    borderRadius: 57,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cameraBadge: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  photoHint: { fontSize: 14 },
 });

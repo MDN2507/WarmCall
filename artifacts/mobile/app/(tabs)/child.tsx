@@ -149,7 +149,7 @@ export default function ChildScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { parentName, parentPhone, sendReminder, logCall, currentStreak } = useApp();
+  const { parentName, parentPhone, sendReminder, logCall, currentStreak, parentPhotoUri } = useApp();
   const [topicsVisible, setTopicsVisible] = useState(false);
   const [reminderSent, setReminderSent] = useState(false);
   const checkScale = useRef(new Animated.Value(0)).current;
@@ -202,7 +202,11 @@ export default function ChildScreen() {
         <View style={styles.parentCard}>
           <View style={[styles.parentAvatarRing, { borderColor: colors.accent }]}>
             <Image
-              source={require("@/assets/images/parent-placeholder.png")}
+              source={
+                parentPhotoUri
+                  ? { uri: parentPhotoUri }
+                  : require("@/assets/images/parent-placeholder.png")
+              }
               style={styles.parentAvatar}
             />
           </View>

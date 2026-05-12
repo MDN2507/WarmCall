@@ -99,7 +99,7 @@ export default function ParentScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { childName, parentPhone, hasPendingNotification, pendingMessage, clearNotification } =
+  const { childName, parentPhone, hasPendingNotification, pendingMessage, clearNotification, childPhotoUri } =
     useApp();
 
   const bgAnim = useRef(new Animated.Value(hasPendingNotification ? 1 : 0)).current;
@@ -172,7 +172,11 @@ export default function ParentScreen() {
         <View style={styles.avatarSection}>
           <View style={[styles.avatarRing, { borderColor: colors.accent }]}>
             <Image
-              source={require("@/assets/images/child-placeholder.png")}
+              source={
+                childPhotoUri
+                  ? { uri: childPhotoUri }
+                  : require("@/assets/images/child-placeholder.png")
+              }
               style={styles.avatar}
             />
           </View>

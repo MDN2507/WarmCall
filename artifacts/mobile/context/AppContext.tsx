@@ -23,6 +23,10 @@ interface AppContextType {
   setParentPhone: (phone: string) => void;
   childName: string;
   setChildName: (name: string) => void;
+  parentPhotoUri: string | null;
+  setParentPhotoUri: (uri: string | null) => void;
+  childPhotoUri: string | null;
+  setChildPhotoUri: (uri: string | null) => void;
   hasPendingNotification: boolean;
   pendingMessage: string;
   sendReminder: (message: string) => void;
@@ -66,6 +70,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hasPendingNotification, setHasPendingNotification] = useState(false);
   const [pendingMessage, setPendingMessage] = useState("");
   const [callHistory, setCallHistory] = useState<CallRecord[]>([]);
+  const [parentPhotoUri, setParentPhotoUriState] = useState<string | null>(null);
+  const [childPhotoUri, setChildPhotoUriState] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -81,6 +87,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setHasPendingNotification(saved.hasPendingNotification);
           if (saved.pendingMessage) setPendingMessage(saved.pendingMessage);
           if (Array.isArray(saved.callHistory)) setCallHistory(saved.callHistory);
+          if (saved.parentPhotoUri) setParentPhotoUriState(saved.parentPhotoUri);
+          if (saved.childPhotoUri) setChildPhotoUriState(saved.childPhotoUri);
         }
       })
       .finally(() => setIsLoaded(true));
@@ -96,11 +104,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         hasPendingNotification,
         pendingMessage,
         callHistory,
+        parentPhotoUri,
+        childPhotoUri,
         ...updates,
       };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     },
-    [role, parentName, parentPhone, childName, hasPendingNotification, pendingMessage, callHistory]
+    [role, parentName, parentPhone, childName, hasPendingNotification, pendingMessage, callHistory, parentPhotoUri, childPhotoUri]
   );
 
   const setRole = useCallback(
@@ -117,6 +127,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   const setChildName = useCallback(
     (n: string) => { setChildNameState(n); persist({ childName: n }); },
+    [persist]
+  );
+  const setParentPhotoUri = useCallback(
+    (uri: string | null) => { setParentPhotoUriState(uri); persist({ parentPhotoUri: uri }); },
+    [persist]
+  );
+  const setChildPhotoUri = useCallback(
+    (uri: string | null) => { setChildPhotoUriState(uri); persist({ childPhotoUri: uri }); },
     [persist]
   );
   const sendReminder = useCallback(
@@ -160,6 +178,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         hasPendingNotification, pendingMessage,
         sendReminder, clearNotification,
         callHistory, logCall, currentStreak,
+        parentPhotoUri, setParentPhotoUri,
+        childPhotoUri, setChildPhotoUri,
         isLoaded,
       }}
     >
