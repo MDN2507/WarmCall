@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
@@ -15,7 +16,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
+const HERO_HEIGHT = height * 0.52;
 
 function RoleButton({
   label,
@@ -31,14 +33,12 @@ function RoleButton({
   isPrimary: boolean;
 }) {
   const colors = useColors();
-  const scale = React.useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
 
-  const handlePressIn = () => {
+  const handlePressIn = () =>
     Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
-  };
-  const handlePressOut = () => {
+  const handlePressOut = () =>
     Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-  };
 
   return (
     <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
@@ -58,31 +58,17 @@ function RoleButton({
             { backgroundColor: isPrimary ? "rgba(255,255,255,0.25)" : colors.accent },
           ]}
         >
-          <Feather
-            name={icon as "home"}
-            size={32}
-            color={isPrimary ? "#fff" : colors.text}
-          />
+          <Feather name={icon as "phone-call"} size={28} color={isPrimary ? "#fff" : colors.text} />
         </View>
-        <Text
-          style={[
-            styles.roleLabel,
-            { color: isPrimary ? "#fff" : colors.text, fontFamily: "Nunito_700Bold" },
-          ]}
-        >
-          {label}
-        </Text>
-        <Text
-          style={[
-            styles.roleSubtitle,
-            {
-              color: isPrimary ? "rgba(255,255,255,0.8)" : colors.mutedForeground,
-              fontFamily: "Nunito_400Regular",
-            },
-          ]}
-        >
-          {subtitle}
-        </Text>
+        <View style={styles.roleLabelBlock}>
+          <Text style={[styles.roleLabel, { color: isPrimary ? "#fff" : colors.text, fontFamily: "Nunito_700Bold" }]}>
+            {label}
+          </Text>
+          <Text style={[styles.roleSubtitle, { color: isPrimary ? "rgba(255,255,255,0.8)" : colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+            {subtitle}
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={20} color={isPrimary ? "rgba(255,255,255,0.7)" : colors.mutedForeground} />
       </Animated.View>
     </Pressable>
   );
@@ -93,13 +79,26 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { setRole } = useApp();
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(30)).current;
+
+  const heroScale = useRef(new Animated.Value(1.06)).current;
+  const panelSlide = useRef(new Animated.Value(40)).current;
+  const panelOpacity = useRef(new Animated.Value(0)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 700, useNativeDriver: true }),
+      Animated.timing(heroScale, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      Animated.sequence([
+        Animated.delay(200),
+        Animated.parallel([
+          Animated.timing(panelSlide, { toValue: 0, duration: 600, useNativeDriver: true }),
+          Animated.timing(panelOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ]),
+      ]),
+      Animated.sequence([
+        Animated.delay(100),
+        Animated.timing(titleOpacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ]),
     ]).start();
   }, []);
 
@@ -115,37 +114,48 @@ export default function WelcomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.heroContainer}>
+        <Animated.View style={[styles.heroImageWrapper, { transform: [{ scale: heroScale }] }]}>
+          <Image
+            source={require("@/assets/images/hero.jpg")}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+        </Animated.View>
+
+        <LinearGradient
+          colors={["transparent", "rgba(255,248,240,0.6)", colors.background]}
+          locations={[0.4, 0.72, 1]}
+          style={styles.gradient}
+        />
+
+        <Animated.View style={[styles.heroTitle, { paddingTop: insets.top + 16, opacity: titleOpacity }]}>
+          <View style={[styles.appBadge, { backgroundColor: "rgba(255,248,240,0.88)" }]}>
+            <Image source={require("@/assets/images/icon.png")} style={styles.badgeIcon} />
+            <Text style={[styles.badgeText, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
+              Тёплый звонок
+            </Text>
+          </View>
+        </Animated.View>
+      </View>
+
       <Animated.View
         style={[
-          styles.content,
+          styles.panel,
           {
-            paddingTop: insets.top + 48,
-            paddingBottom: insets.bottom + 32,
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
+            backgroundColor: colors.background,
+            paddingBottom: insets.bottom + 24,
+            opacity: panelOpacity,
+            transform: [{ translateY: panelSlide }],
           },
         ]}
       >
-        <View style={styles.heroSection}>
-          <Image
-            source={require("@/assets/images/icon.png")}
-            style={styles.logo}
-          />
-          <Text style={[styles.appName, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
-            Тёплый звонок
-          </Text>
-          <Text style={[styles.tagline, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-            Будьте ближе к тем, кого любите
-          </Text>
-        </View>
-
-        <View style={styles.dividerRow}>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerText, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>
-            Кто вы?
-          </Text>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        </View>
+        <Text style={[styles.tagline, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
+          Будьте ближе{"\n"}к тем, кого любите
+        </Text>
+        <Text style={[styles.taglineSub, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+          Выберите, кто вы
+        </Text>
 
         <View style={styles.buttons}>
           <RoleButton
@@ -156,95 +166,102 @@ export default function WelcomeScreen() {
             isPrimary={true}
           />
           <RoleButton
-            label="Я ребенок"
+            label="Я ребёнок"
             subtitle="Напомнить и позвонить маме"
             icon="heart"
             onPress={handleChild}
             isPrimary={false}
           />
         </View>
-
-        <Text style={[styles.footer, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-          Приложение для теплых семейных звонков
-        </Text>
       </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+
+  heroContainer: {
+    height: HERO_HEIGHT,
+    overflow: "hidden",
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    justifyContent: "space-between",
+  heroImageWrapper: {
+    width: "100%",
+    height: "100%",
   },
-  heroSection: {
-    alignItems: "center",
-    gap: 12,
+  heroImage: {
+    width: "100%",
+    height: "100%",
   },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 28,
-    marginBottom: 8,
+  gradient: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: HERO_HEIGHT * 0.65,
   },
-  appName: {
-    fontSize: 36,
-    letterSpacing: -0.5,
+  heroTitle: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
   },
-  tagline: {
-    fontSize: 18,
-    textAlign: "center",
-  },
-  dividerRow: {
+  appBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    width: "100%",
+    gap: 10,
+    alignSelf: "flex-start",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  divider: {
+  badgeIcon: { width: 30, height: 30, borderRadius: 8 },
+  badgeText: { fontSize: 18 },
+
+  panel: {
     flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    fontSize: 16,
-  },
-  buttons: {
-    width: "100%",
+    paddingHorizontal: 22,
+    paddingTop: 4,
     gap: 16,
   },
+  tagline: {
+    fontSize: 30,
+    lineHeight: 38,
+  },
+  taglineSub: {
+    fontSize: 17,
+    marginTop: -6,
+  },
+  buttons: { gap: 12, flex: 1, justifyContent: "center" },
+
   roleButton: {
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 2,
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 14,
     shadowColor: "#D4943A",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowRadius: 10,
+    elevation: 3,
   },
   roleIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
   },
-  roleLabel: {
-    fontSize: 24,
-  },
-  roleSubtitle: {
-    fontSize: 16,
-    textAlign: "center",
-  },
-  footer: {
-    fontSize: 14,
-    textAlign: "center",
-  },
+  roleLabelBlock: { flex: 1, gap: 2 },
+  roleLabel: { fontSize: 22 },
+  roleSubtitle: { fontSize: 14 },
 });
