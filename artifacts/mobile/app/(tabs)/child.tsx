@@ -149,7 +149,7 @@ export default function ChildScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { parentName, parentPhone, sendReminder } = useApp();
+  const { parentName, parentPhone, sendReminder, logCall, currentStreak } = useApp();
   const [topicsVisible, setTopicsVisible] = useState(false);
   const [reminderSent, setReminderSent] = useState(false);
   const checkScale = useRef(new Animated.Value(0)).current;
@@ -171,6 +171,7 @@ export default function ChildScreen() {
 
   const handleCall = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    logCall();
     Linking.openURL(`tel:${parentPhone.replace(/\s/g, "")}`);
     setTimeout(() => {
       router.push("/(tabs)/feedback");
@@ -251,6 +252,24 @@ export default function ChildScreen() {
             color={colors.accent}
             onPress={() => setTopicsVisible(true)}
           />
+
+          <Pressable
+            style={[styles.historyBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/history")}
+          >
+            <Feather name="clock" size={20} color={colors.mutedForeground} />
+            <Text style={[styles.historyBtnText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
+              История звонков
+            </Text>
+            {currentStreak > 0 && (
+              <View style={[styles.streakBadge, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.streakBadgeText, { fontFamily: "Nunito_700Bold" }]}>
+                  {currentStreak} 🔥
+                </Text>
+              </View>
+            )}
+            <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+          </Pressable>
         </View>
 
         <View style={[styles.tipCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -348,6 +367,22 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sentText: { fontSize: 16, flex: 1 },
+  historyBtn: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  historyBtnText: { fontSize: 18, flex: 1 },
+  streakBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  streakBadgeText: { fontSize: 14, color: "#fff" },
   tipCard: {
     borderRadius: 16,
     borderWidth: 1,

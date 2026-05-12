@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 
 function HeartBurst() {
@@ -97,6 +98,7 @@ export default function FeedbackScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { currentStreak, callHistory } = useApp();
   const textOpacity = useRef(new Animated.Value(0)).current;
   const textTranslate = useRef(new Animated.Value(20)).current;
 
@@ -134,25 +136,40 @@ export default function FeedbackScreen() {
         </Animated.View>
 
         <View style={[styles.streakCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="award" size={28} color={colors.primary} />
-          <View>
+          <Text style={styles.streakEmoji}>
+            {currentStreak >= 7 ? "🔥" : currentStreak >= 3 ? "🌸" : currentStreak >= 1 ? "🌱" : "📞"}
+          </Text>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.streakLabel, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-              Продолжай звонить!
+              Серия звонков
             </Text>
             <Text style={[styles.streakValue, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
-              Регулярные звонки = счастливая семья
+              {currentStreak > 0
+                ? `${currentStreak} ${currentStreak === 1 ? "день" : currentStreak < 5 ? "дня" : "дней"} подряд · ${callHistory.length} всего`
+                : "Регулярные звонки = счастливая семья"}
             </Text>
           </View>
         </View>
 
-        <Pressable
-          style={[styles.doneBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.push("/(tabs)/")}
-        >
-          <Text style={[styles.doneBtnText, { fontFamily: "Nunito_700Bold" }]}>
-            На главную
-          </Text>
-        </Pressable>
+        <View style={styles.btnRow}>
+          <Pressable
+            style={[styles.historyBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/history")}
+          >
+            <Feather name="clock" size={20} color={colors.text} />
+            <Text style={[styles.historyBtnText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
+              История
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.doneBtn, { backgroundColor: colors.primary }]}
+            onPress={() => router.push("/(tabs)/child")}
+          >
+            <Text style={[styles.doneBtnText, { fontFamily: "Nunito_700Bold" }]}>
+              Назад
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -202,22 +219,39 @@ const styles = StyleSheet.create({
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 14,
     width: "100%",
   },
-  streakLabel: { fontSize: 15 },
-  streakValue: { fontSize: 17, marginTop: 2 },
-  doneBtn: {
+  streakEmoji: { fontSize: 36 },
+  streakLabel: { fontSize: 14 },
+  streakValue: { fontSize: 16, marginTop: 2 },
+  btnRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  historyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     borderRadius: 20,
     paddingVertical: 18,
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
+    borderWidth: 2,
+  },
+  historyBtnText: { fontSize: 18 },
+  doneBtn: {
+    flex: 1,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     alignItems: "center",
-    width: "100%",
     shadowColor: "#D4943A",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 6,
   },
-  doneBtnText: { fontSize: 22, color: "#fff" },
+  doneBtnText: { fontSize: 20, color: "#fff" },
 });
