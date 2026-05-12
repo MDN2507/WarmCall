@@ -7,10 +7,12 @@ import {
   Image,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
@@ -18,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { formatReminderTime } from "@/utils/notifications";
 
 const REMINDER_MESSAGES = [
   "Сегодня хорошая погода — как у мамы в саду?",
@@ -87,6 +90,159 @@ function ActionButton({
         <Feather name="chevron-right" size={22} color="rgba(255,255,255,0.7)" />
       </Animated.View>
     </Pressable>
+  );
+}
+
+const TIME_PRESETS = [
+  { label: "9:00", hour: 9, minute: 0 },
+  { label: "12:00", hour: 12, minute: 0 },
+  { label: "17:00", hour: 17, minute: 0 },
+  { label: "19:00", hour: 19, minute: 0 },
+  { label: "21:00", hour: 21, minute: 0 },
+];
+
+function ReminderModal({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const { reminderEnabled, reminderHour, reminderMinute, setReminder } = useApp();
+
+  const [localEnabled, setLocalEnabled] = useState(reminderEnabled);
+  const [localHour, setLocalHour] = useState(reminderHour);
+  const [localMinute, setLocalMinute] = useState(reminderMinute);
+  const [saving, setSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setLocalEnabled(reminderEnabled);
+      setLocalHour(reminderHour);
+      setLocalMinute(reminderMinute);
+    }
+  }, [visible, reminderEnabled, reminderHour, reminderMinute]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await setReminder(localEnabled, localHour, localMinute);
+    setSaving(false);
+    onClose();
+  };
+
+  const isWeb = Platform.OS === "web";
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable
+          style={[
+            styles.modalSheet,
+            { backgroundColor: colors.background, paddingBottom: insets.bottom + 24 },
+          ]}
+        >
+          <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+
+          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
+            Напоминание о звонке
+          </Text>
+
+          {isWeb ? (
+            <View style={[styles.webNotice, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={styles.webNoticeEmoji}>📱</Text>
+              <Text style={[styles.webNoticeText, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+                Push-уведомления работают только в мобильном приложении. Установите Expo Go и откройте приложение там!
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={[styles.reminderToggleRow, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                <View style={styles.reminderToggleLeft}>
+                  <Text style={styles.reminderToggleEmoji}>🔔</Text>
+                  <View>
+                    <Text style={[styles.reminderToggleTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
+                      Ежедневное напоминание
+                    </Text>
+                    <Text style={[styles.reminderToggleSub, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+                      {localEnabled
+                        ? `Каждый день в ${formatReminderTime(localHour, localMinute)}`
+                        : "Выключено"}
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={localEnabled}
+                  onValueChange={setLocalEnabled}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor="#fff"
+                />
+              </View>
+
+              {localEnabled && (
+                <>
+                  <Text style={[styles.timeLabel, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>
+                    Выбери время
+                  </Text>
+                  <View style={styles.timePresets}>
+                    {TIME_PRESETS.map((preset) => {
+                      const active = preset.hour === localHour && preset.minute === localMinute;
+                      return (
+                        <Pressable
+                          key={preset.label}
+                          onPress={() => {
+                            setLocalHour(preset.hour);
+                            setLocalMinute(preset.minute);
+                          }}
+                          style={[
+                            styles.timeChip,
+                            {
+                              backgroundColor: active ? colors.primary : colors.card,
+                              borderColor: active ? colors.primary : colors.border,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.timeChipText,
+                              {
+                                color: active ? "#fff" : colors.text,
+                                fontFamily: "Nunito_700Bold",
+                              },
+                            ]}
+                          >
+                            {preset.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <View style={[styles.reminderPreview, { backgroundColor: colors.card, borderColor: colors.accent }]}>
+                    <Text style={styles.reminderPreviewEmoji}>💛</Text>
+                    <Text style={[styles.reminderPreviewText, { color: colors.text, fontFamily: "Nunito_400Regular" }]}>
+                      «Ты сегодня ещё не звонил маме. Она будет рада услышать тебя!»
+                    </Text>
+                  </View>
+                </>
+              )}
+            </>
+          )}
+
+          <Pressable
+            style={[styles.shareBtn, { backgroundColor: isWeb ? colors.border : colors.primary, opacity: saving ? 0.7 : 1 }]}
+            onPress={isWeb ? onClose : handleSave}
+            disabled={saving}
+          >
+            <Feather name={isWeb ? "x" : "check"} size={22} color="#fff" />
+            <Text style={[styles.shareBtnText, { fontFamily: "Nunito_700Bold" }]}>
+              {isWeb ? "Закрыть" : saving ? "Сохраняю…" : "Сохранить"}
+            </Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -237,9 +393,10 @@ export default function ChildScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { parentName, parentPhone, sendReminder, logCall, currentStreak, parentPhotoUri, childName } = useApp();
+  const { parentName, parentPhone, sendReminder, logCall, currentStreak, parentPhotoUri, childName, reminderEnabled, reminderHour, reminderMinute } = useApp();
   const [topicsVisible, setTopicsVisible] = useState(false);
   const [inviteVisible, setInviteVisible] = useState(false);
+  const [reminderVisible, setReminderVisible] = useState(false);
   const [reminderSent, setReminderSent] = useState(false);
   const checkScale = useRef(new Animated.Value(0)).current;
 
@@ -366,6 +523,24 @@ export default function ChildScreen() {
         </View>
 
         <Pressable
+          style={[styles.inviteBtn, { backgroundColor: colors.card, borderColor: reminderEnabled ? colors.primary : colors.border }]}
+          onPress={() => setReminderVisible(true)}
+        >
+          <Text style={styles.inviteBtnEmoji}>{reminderEnabled ? "🔔" : "🔕"}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.inviteBtnTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
+              Напоминание о звонке
+            </Text>
+            <Text style={[styles.inviteBtnSub, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+              {reminderEnabled
+                ? `Каждый день в ${formatReminderTime(reminderHour, reminderMinute)}`
+                : "Нажми, чтобы включить"}
+            </Text>
+          </View>
+          <Feather name="bell" size={20} color={reminderEnabled ? colors.primary : colors.mutedForeground} />
+        </Pressable>
+
+        <Pressable
           style={[styles.inviteBtn, { backgroundColor: colors.card, borderColor: colors.accent }]}
           onPress={() => setInviteVisible(true)}
         >
@@ -391,6 +566,7 @@ export default function ChildScreen() {
 
       <TopicsModal visible={topicsVisible} onClose={() => setTopicsVisible(false)} />
       <InviteModal visible={inviteVisible} onClose={() => setInviteVisible(false)} childName={childName} />
+      <ReminderModal visible={reminderVisible} onClose={() => setReminderVisible(false)} />
     </View>
   );
 }
@@ -552,6 +728,51 @@ const styles = StyleSheet.create({
   shareBtnText: { fontSize: 20, color: "#fff" },
   cancelLink: { alignItems: "center", paddingVertical: 6 },
   cancelText: { fontSize: 17 },
+  reminderToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+    width: "100%",
+  },
+  reminderToggleLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  reminderToggleEmoji: { fontSize: 28 },
+  reminderToggleTitle: { fontSize: 17 },
+  reminderToggleSub: { fontSize: 14, marginTop: 2 },
+  timeLabel: { fontSize: 15, alignSelf: "flex-start" },
+  timePresets: { flexDirection: "row", flexWrap: "wrap", gap: 10, width: "100%" },
+  timeChip: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    minWidth: 72,
+    alignItems: "center",
+  },
+  timeChipText: { fontSize: 18 },
+  reminderPreview: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    width: "100%",
+  },
+  reminderPreviewEmoji: { fontSize: 22 },
+  reminderPreviewText: { fontSize: 15, flex: 1, lineHeight: 22, fontStyle: "italic" },
+  webNotice: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    alignItems: "center",
+    gap: 12,
+    width: "100%",
+  },
+  webNoticeEmoji: { fontSize: 40 },
+  webNoticeText: { fontSize: 16, textAlign: "center", lineHeight: 24 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",

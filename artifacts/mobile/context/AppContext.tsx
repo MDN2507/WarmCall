@@ -7,6 +7,11 @@ import React, {
   useState,
 } from "react";
 
+import {
+  cancelDailyReminder,
+  scheduleDailyReminder,
+} from "@/utils/notifications";
+
 export interface CallRecord {
   id: string;
   date: string;
@@ -36,6 +41,10 @@ interface AppContextType {
   callHistory: CallRecord[];
   logCall: (note?: string) => void;
   currentStreak: number;
+  reminderEnabled: boolean;
+  reminderHour: number;
+  reminderMinute: number;
+  setReminder: (enabled: boolean, hour: number, minute: number) => Promise<void>;
   isLoaded: boolean;
 }
 
@@ -75,6 +84,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [parentPhotoUri, setParentPhotoUriState] = useState<string | null>(null);
   const [childPhotoUri, setChildPhotoUriState] = useState<string | null>(null);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderHour, setReminderHour] = useState(19);
+  const [reminderMinute, setReminderMinute] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -93,6 +105,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (saved.parentPhotoUri) setParentPhotoUriState(saved.parentPhotoUri);
           if (saved.childPhotoUri) setChildPhotoUriState(saved.childPhotoUri);
           if (saved.hasSeenOnboarding) setHasSeenOnboarding(saved.hasSeenOnboarding);
+          if (typeof saved.reminderEnabled === "boolean") setReminderEnabled(saved.reminderEnabled);
+          if (typeof saved.reminderHour === "number") setReminderHour(saved.reminderHour);
+          if (typeof saved.reminderMinute === "number") setReminderMinute(saved.reminderMinute);
         }
       })
       .finally(() => setIsLoaded(true));
@@ -111,11 +126,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         parentPhotoUri,
         childPhotoUri,
         hasSeenOnboarding,
+        reminderEnabled,
+        reminderHour,
+        reminderMinute,
         ...updates,
       };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     },
-    [role, parentName, parentPhone, childName, hasPendingNotification, pendingMessage, callHistory, parentPhotoUri, childPhotoUri, hasSeenOnboarding]
+    [role, parentName, parentPhone, childName, hasPendingNotification, pendingMessage, callHistory, parentPhotoUri, childPhotoUri, hasSeenOnboarding, reminderEnabled, reminderHour, reminderMinute]
   );
 
   const setRole = useCallback(
@@ -146,6 +164,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setHasSeenOnboarding(true);
     persist({ hasSeenOnboarding: true });
   }, [persist]);
+
+  const setReminder = useCallback(
+    async (enabled: boolean, hour: number, minute: number) => {
+      setReminderEnabled(enabled);
+      setReminderHour(hour);
+      setReminderMinute(minute);
+      persist({ reminderEnabled: enabled, reminderHour: hour, reminderMinute: minute });
+      if (enabled) {
+        await scheduleDailyReminder(hour, minute, parentName);
+      } else {
+        await cancelDailyReminder();
+      }
+    },
+    [persist, parentName]
+  );
+
   const sendReminder = useCallback(
     (message: string) => {
       setHasPendingNotification(true);
@@ -190,6 +224,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         parentPhotoUri, setParentPhotoUri,
         childPhotoUri, setChildPhotoUri,
         hasSeenOnboarding, completeOnboarding,
+        reminderEnabled, reminderHour, reminderMinute, setReminder,
         isLoaded,
       }}
     >
