@@ -186,7 +186,12 @@ export default function ChildScreen() {
         <Text style={[styles.headerTitle, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>
           Тёплый звонок
         </Text>
-        <View style={{ width: 40 }} />
+        <Pressable
+          onPress={() => router.push({ pathname: "/(tabs)/setup", params: { edit: "1" } })}
+          style={styles.backBtn}
+        >
+          <Feather name="edit-2" size={20} color={colors.text} />
+        </Pressable>
       </View>
 
       <ScrollView

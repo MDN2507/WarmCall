@@ -139,7 +139,12 @@ export default function ParentScreen() {
         <Text style={[styles.headerTitle, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>
           Режим родителя
         </Text>
-        <View style={{ width: 40 }} />
+        <Pressable
+          onPress={() => router.push({ pathname: "/(tabs)/setup", params: { edit: "1" } })}
+          style={styles.backBtn}
+        >
+          <Feather name="edit-2" size={20} color={colors.text} />
+        </Pressable>
       </View>
 
       <View style={[styles.content, { paddingBottom: insets.bottom + 32 }]}>

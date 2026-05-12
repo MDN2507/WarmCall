@@ -105,12 +105,12 @@ export default function WelcomeScreen() {
 
   const handleParent = () => {
     setRole("parent");
-    router.push("/(tabs)/parent");
+    router.push({ pathname: "/(tabs)/setup", params: { role: "parent" } });
   };
 
   const handleChild = () => {
     setRole("child");
-    router.push("/(tabs)/child");
+    router.push({ pathname: "/(tabs)/setup", params: { role: "child" } });
   };
 
   return (

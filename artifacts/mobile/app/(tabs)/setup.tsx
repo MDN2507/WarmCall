@@ -1,0 +1,340 @@
+import { Feather } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { useApp } from "@/context/AppContext";
+import { useColors } from "@/hooks/useColors";
+
+function InputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  keyboardType,
+  icon,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  keyboardType?: "default" | "phone-pad";
+  icon: string;
+}) {
+  const colors = useColors();
+  const [focused, setFocused] = useState(false);
+  const borderAnim = useRef(new Animated.Value(0)).current;
+
+  const handleFocus = () => {
+    setFocused(true);
+    Animated.spring(borderAnim, { toValue: 1, useNativeDriver: false }).start();
+  };
+  const handleBlur = () => {
+    setFocused(false);
+    Animated.spring(borderAnim, { toValue: 0, useNativeDriver: false }).start();
+  };
+
+  const borderColor = borderAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.border, colors.primary],
+  });
+
+  return (
+    <View style={styles.fieldWrapper}>
+      <Text
+        style={[
+          styles.fieldLabel,
+          { color: focused ? colors.primary : colors.mutedForeground, fontFamily: "Nunito_600SemiBold" },
+        ]}
+      >
+        {label}
+      </Text>
+      <Animated.View
+        style={[
+          styles.inputRow,
+          {
+            backgroundColor: colors.card,
+            borderColor,
+          },
+        ]}
+      >
+        <Feather
+          name={icon as "user"}
+          size={20}
+          color={focused ? colors.primary : colors.mutedForeground}
+          style={styles.inputIcon}
+        />
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          placeholderTextColor={colors.mutedForeground}
+          keyboardType={keyboardType ?? "default"}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          style={[
+            styles.input,
+            { color: colors.text, fontFamily: "Nunito_400Regular" },
+          ]}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+export default function SetupScreen() {
+  const colors = useColors();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ role?: string; edit?: string }>();
+  const isEdit = params.edit === "1";
+  const {
+    role,
+    parentName,
+    setParentName,
+    parentPhone,
+    setParentPhone,
+    childName,
+    setChildName,
+  } = useApp();
+
+  const activeRole = (params.role as "parent" | "child") ?? role;
+
+  const [localParentName, setLocalParentName] = useState(parentName);
+  const [localChildName, setLocalChildName] = useState(childName);
+  const [localPhone, setLocalPhone] = useState(parentPhone);
+
+  const isParent = activeRole === "parent";
+
+  const handleSave = () => {
+    setParentName(localParentName.trim() || "Мама");
+    setChildName(localChildName.trim() || "Маша");
+    setParentPhone(localPhone.trim() || "+7 900 000 0000");
+    if (isEdit) {
+      router.back();
+    } else if (isParent) {
+      router.replace("/(tabs)/parent");
+    } else {
+      router.replace("/(tabs)/child");
+    }
+  };
+
+  const canSave =
+    (isParent ? localChildName.trim().length > 0 : localParentName.trim().length > 0) &&
+    localPhone.trim().length > 0;
+
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const handlePressIn = () =>
+    Animated.spring(btnScale, { toValue: 0.96, useNativeDriver: true }).start();
+  const handlePressOut = () =>
+    Animated.spring(btnScale, { toValue: 1, useNativeDriver: true }).start();
+
+  return (
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={24} color={colors.text} />
+        </Pressable>
+        <Text
+          style={[
+            styles.headerTitle,
+            { color: colors.text, fontFamily: "Nunito_700Bold" },
+          ]}
+        >
+          {isEdit ? "Изменить данные" : "Знакомство"}
+        </Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 40 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View
+          style={[
+            styles.iconRow,
+            { backgroundColor: colors.accent },
+          ]}
+        >
+          <Feather
+            name={isParent ? "phone-call" : "heart"}
+            size={40}
+            color={colors.text}
+          />
+        </View>
+
+        <Text
+          style={[
+            styles.title,
+            { color: colors.text, fontFamily: "Nunito_800ExtraBold" },
+          ]}
+        >
+          {isParent ? "Настройка для родителя" : "Настройка для ребёнка"}
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" },
+          ]}
+        >
+          {isParent
+            ? "Введите имя вашего ребёнка и его номер телефона"
+            : "Введите имя родителя и его номер телефона"}
+        </Text>
+
+        <View style={styles.fields}>
+          {isParent ? (
+            <InputField
+              label="Имя ребёнка"
+              value={localChildName}
+              onChange={setLocalChildName}
+              placeholder="Маша"
+              icon="user"
+            />
+          ) : (
+            <InputField
+              label="Имя родителя"
+              value={localParentName}
+              onChange={setLocalParentName}
+              placeholder="Мама"
+              icon="user"
+            />
+          )}
+
+          <InputField
+            label={isParent ? "Номер телефона ребёнка" : "Номер телефона родителя"}
+            value={localPhone}
+            onChange={setLocalPhone}
+            placeholder="+7 900 000 0000"
+            keyboardType="phone-pad"
+            icon="phone"
+          />
+        </View>
+
+        <Pressable
+          onPress={canSave ? handleSave : undefined}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+        >
+          <Animated.View
+            style={[
+              styles.saveBtn,
+              {
+                backgroundColor: canSave ? colors.primary : colors.muted,
+                transform: [{ scale: btnScale }],
+              },
+            ]}
+          >
+            <Feather
+              name={isEdit ? "check" : "arrow-right"}
+              size={22}
+              color="#fff"
+            />
+            <Text
+              style={[styles.saveBtnText, { fontFamily: "Nunito_700Bold" }]}
+            >
+              {isEdit ? "Сохранить" : "Готово, начинаем!"}
+            </Text>
+          </Animated.View>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: { fontSize: 20 },
+  content: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    gap: 20,
+    alignItems: "center",
+  },
+  iconRow: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 28,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 18,
+    textAlign: "center",
+    lineHeight: 26,
+  },
+  fields: {
+    width: "100%",
+    gap: 16,
+    marginTop: 8,
+  },
+  fieldWrapper: { gap: 6 },
+  fieldLabel: { fontSize: 16, marginLeft: 4 },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    borderWidth: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  inputIcon: {},
+  input: {
+    flex: 1,
+    fontSize: 20,
+    padding: 0,
+  },
+  saveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 36,
+    width: "100%",
+    shadowColor: "#D4943A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  saveBtnText: { fontSize: 22, color: "#fff" },
+});
