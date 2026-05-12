@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -89,6 +90,93 @@ function ActionButton({
   );
 }
 
+const INVITE_STEPS = [
+  { icon: "download", text: "Скачай приложение «Тёплый звонок»" },
+  { icon: "user", text: "Выбери «Я родитель»" },
+  { icon: "phone-incoming", text: "Жди тёплого звонка от меня!" },
+];
+
+function InviteModal({ visible, onClose, childName }: { visible: boolean; onClose: () => void; childName: string }) {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const heartScale = useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (!visible) return;
+    Animated.loop(
+      Animated.sequence([
+        Animated.spring(heartScale, { toValue: 1.15, useNativeDriver: true }),
+        Animated.spring(heartScale, { toValue: 1, useNativeDriver: true }),
+      ])
+    ).start();
+    return () => heartScale.stopAnimation();
+  }, [visible]);
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message:
+          `💛 Привет! Это ${childName}.\n\n` +
+          `Я хочу звонить тебе чаще — установи приложение «Тёплый звонок», и это будет так просто!\n\n` +
+          `📱 Для Android: https://play.google.com/store\n` +
+          `🍎 Для iPhone: https://apps.apple.com\n\n` +
+          `Выбери «Я родитель» и жди моего звонка. Люблю тебя! ❤️`,
+        title: "Тёплый звонок — приложение для связи с близкими",
+      });
+    } catch (_) {}
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.modalSheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+
+          <Animated.Text style={[styles.inviteEmoji, { transform: [{ scale: heartScale }] }]}>
+            💌
+          </Animated.Text>
+
+          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
+            Пригласи маму{"\n"}в приложение
+          </Text>
+          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+            Отправь ссылку — она всё сделает сама!
+          </Text>
+
+          <View style={[styles.inviteSteps, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {INVITE_STEPS.map((step, i) => (
+              <View key={i} style={styles.inviteStep}>
+                <View style={[styles.stepNumCircle, { backgroundColor: colors.accent }]}>
+                  <Feather name={step.icon as "download"} size={16} color={colors.text} />
+                </View>
+                <Text style={[styles.stepText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
+                  {step.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <Pressable
+            style={[styles.shareBtn, { backgroundColor: colors.primary }]}
+            onPress={handleShare}
+          >
+            <Feather name="share-2" size={22} color="#fff" />
+            <Text style={[styles.shareBtnText, { fontFamily: "Nunito_700Bold" }]}>
+              Поделиться ссылкой
+            </Text>
+          </Pressable>
+
+          <Pressable onPress={onClose} style={styles.cancelLink}>
+            <Text style={[styles.cancelText, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>
+              Закрыть
+            </Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 function TopicsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -149,8 +237,9 @@ export default function ChildScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { parentName, parentPhone, sendReminder, logCall, currentStreak, parentPhotoUri } = useApp();
+  const { parentName, parentPhone, sendReminder, logCall, currentStreak, parentPhotoUri, childName } = useApp();
   const [topicsVisible, setTopicsVisible] = useState(false);
+  const [inviteVisible, setInviteVisible] = useState(false);
   const [reminderSent, setReminderSent] = useState(false);
   const checkScale = useRef(new Animated.Value(0)).current;
 
@@ -276,6 +365,22 @@ export default function ChildScreen() {
           </Pressable>
         </View>
 
+        <Pressable
+          style={[styles.inviteBtn, { backgroundColor: colors.card, borderColor: colors.accent }]}
+          onPress={() => setInviteVisible(true)}
+        >
+          <Text style={styles.inviteBtnEmoji}>💌</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.inviteBtnTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
+              Пригласить маму в приложение
+            </Text>
+            <Text style={[styles.inviteBtnSub, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+              Поделиться ссылкой на установку
+            </Text>
+          </View>
+          <Feather name="share-2" size={20} color={colors.primary} />
+        </Pressable>
+
         <View style={[styles.tipCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Feather name="sun" size={18} color={colors.primary} />
           <Text style={[styles.tipText, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
@@ -285,6 +390,7 @@ export default function ChildScreen() {
       </ScrollView>
 
       <TopicsModal visible={topicsVisible} onClose={() => setTopicsVisible(false)} />
+      <InviteModal visible={inviteVisible} onClose={() => setInviteVisible(false)} childName={childName} />
     </View>
   );
 }
@@ -387,6 +493,18 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   streakBadgeText: { fontSize: 14, color: "#fff" },
+  inviteBtn: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  inviteBtnEmoji: { fontSize: 28 },
+  inviteBtnTitle: { fontSize: 17 },
+  inviteBtnSub: { fontSize: 14, marginTop: 2 },
   tipCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -396,6 +514,44 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tipText: { fontSize: 16, flex: 1, lineHeight: 24 },
+  inviteEmoji: { fontSize: 52, textAlign: "center", marginVertical: 4 },
+  inviteSteps: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+    gap: 14,
+    width: "100%",
+  },
+  inviteStep: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  stepNumCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepText: { fontSize: 16, flex: 1 },
+  shareBtn: {
+    borderRadius: 18,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    width: "100%",
+    shadowColor: "#D4943A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  shareBtnText: { fontSize: 20, color: "#fff" },
+  cancelLink: { alignItems: "center", paddingVertical: 6 },
+  cancelText: { fontSize: 17 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
