@@ -19,6 +19,8 @@ export interface CallRecord {
   note?: string;
 }
 
+export type ParentMood = "happy" | "okay" | "miss" | null;
+
 interface AppContextType {
   role: "parent" | "child" | null;
   setRole: (role: "parent" | "child" | null) => void;
@@ -45,6 +47,8 @@ interface AppContextType {
   reminderHour: number;
   reminderMinute: number;
   setReminder: (enabled: boolean, hour: number, minute: number) => Promise<void>;
+  parentMood: ParentMood;
+  setParentMood: (mood: ParentMood) => void;
   isLoaded: boolean;
 }
 
@@ -87,6 +91,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderHour, setReminderHour] = useState(19);
   const [reminderMinute, setReminderMinute] = useState(0);
+  const [parentMood, setParentMoodState] = useState<ParentMood>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -108,6 +113,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (typeof saved.reminderEnabled === "boolean") setReminderEnabled(saved.reminderEnabled);
           if (typeof saved.reminderHour === "number") setReminderHour(saved.reminderHour);
           if (typeof saved.reminderMinute === "number") setReminderMinute(saved.reminderMinute);
+          if (saved.parentMood) setParentMoodState(saved.parentMood);
         }
       })
       .finally(() => setIsLoaded(true));
@@ -129,11 +135,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         reminderEnabled,
         reminderHour,
         reminderMinute,
+        parentMood,
         ...updates,
       };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     },
-    [role, parentName, parentPhone, childName, hasPendingNotification, pendingMessage, callHistory, parentPhotoUri, childPhotoUri, hasSeenOnboarding, reminderEnabled, reminderHour, reminderMinute]
+    [role, parentName, parentPhone, childName, hasPendingNotification, pendingMessage, callHistory, parentPhotoUri, childPhotoUri, hasSeenOnboarding, reminderEnabled, reminderHour, reminderMinute, parentMood]
   );
 
   const setRole = useCallback(
@@ -164,6 +171,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setHasSeenOnboarding(true);
     persist({ hasSeenOnboarding: true });
   }, [persist]);
+
+  const setParentMood = useCallback(
+    (mood: ParentMood) => { setParentMoodState(mood); persist({ parentMood: mood }); },
+    [persist]
+  );
 
   const setReminder = useCallback(
     async (enabled: boolean, hour: number, minute: number) => {
@@ -225,6 +237,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         childPhotoUri, setChildPhotoUri,
         hasSeenOnboarding, completeOnboarding,
         reminderEnabled, reminderHour, reminderMinute, setReminder,
+        parentMood, setParentMood,
         isLoaded,
       }}
     >

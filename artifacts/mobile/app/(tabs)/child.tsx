@@ -18,9 +18,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp } from "@/context/AppContext";
+import { useApp, type ParentMood } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { formatReminderTime } from "@/utils/notifications";
+
+const MOOD_MAP: Record<NonNullable<ParentMood>, { emoji: string; label: string; color: string }> = {
+  happy: { emoji: "😊", label: "Хорошо", color: "#5DAA68" },
+  okay: { emoji: "😐", label: "Так себе", color: "#D4943A" },
+  miss: { emoji: "🥺", label: "Скучает", color: "#E07070" },
+};
 
 const REMINDER_MESSAGES = [
   "Сегодня хорошая погода — как у мамы в саду?",
@@ -393,7 +399,7 @@ export default function ChildScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { parentName, parentPhone, sendReminder, logCall, currentStreak, parentPhotoUri, childName, reminderEnabled, reminderHour, reminderMinute } = useApp();
+  const { parentName, parentPhone, sendReminder, logCall, currentStreak, parentPhotoUri, childName, reminderEnabled, reminderHour, reminderMinute, parentMood } = useApp();
   const [topicsVisible, setTopicsVisible] = useState(false);
   const [inviteVisible, setInviteVisible] = useState(false);
   const [reminderVisible, setReminderVisible] = useState(false);
@@ -463,6 +469,29 @@ export default function ChildScreen() {
             {parentName}
           </Text>
         </View>
+
+        {parentMood && MOOD_MAP[parentMood] && (
+          <View style={[styles.moodBanner, { backgroundColor: colors.card, borderColor: colors.accent }]}>
+            <Text style={styles.moodBannerEmoji}>{MOOD_MAP[parentMood].emoji}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.moodBannerTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
+                {parentName} сейчас
+              </Text>
+              <Text style={[styles.moodBannerValue, { color: MOOD_MAP[parentMood].color, fontFamily: "Nunito_800ExtraBold" }]}>
+                {MOOD_MAP[parentMood].label}
+              </Text>
+            </View>
+            {parentMood === "miss" && (
+              <Pressable
+                style={[styles.moodCallNow, { backgroundColor: colors.primary }]}
+                onPress={handleCall}
+              >
+                <Feather name="phone" size={18} color="#fff" />
+                <Text style={[styles.moodCallNowText, { fontFamily: "Nunito_700Bold" }]}>Позвонить</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
 
         <View style={styles.actions}>
           <ActionButton
@@ -669,6 +698,27 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   streakBadgeText: { fontSize: 14, color: "#fff" },
+  moodBanner: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  moodBannerEmoji: { fontSize: 36 },
+  moodBannerTitle: { fontSize: 14 },
+  moodBannerValue: { fontSize: 22 },
+  moodCallNow: {
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  moodCallNowText: { fontSize: 14, color: "#fff" },
   inviteBtn: {
     borderRadius: 18,
     borderWidth: 1.5,
