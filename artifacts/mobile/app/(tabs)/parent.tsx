@@ -149,7 +149,7 @@ export default function ParentScreen() {
           Режим родителя
         </Text>
         <Pressable
-          onPress={() => router.push({ pathname: "/(tabs)/setup", params: { edit: "1" } })}
+          onPress={() => router.push("/(tabs)/profile")}
           style={styles.backBtn}
         >
           <Feather name="edit-2" size={20} color={colors.text} />
