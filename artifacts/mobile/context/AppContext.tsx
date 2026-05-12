@@ -27,6 +27,8 @@ interface AppContextType {
   setParentPhotoUri: (uri: string | null) => void;
   childPhotoUri: string | null;
   setChildPhotoUri: (uri: string | null) => void;
+  hasSeenOnboarding: boolean;
+  completeOnboarding: () => void;
   hasPendingNotification: boolean;
   pendingMessage: string;
   sendReminder: (message: string) => void;
@@ -72,6 +74,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [callHistory, setCallHistory] = useState<CallRecord[]>([]);
   const [parentPhotoUri, setParentPhotoUriState] = useState<string | null>(null);
   const [childPhotoUri, setChildPhotoUriState] = useState<string | null>(null);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -89,6 +92,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (Array.isArray(saved.callHistory)) setCallHistory(saved.callHistory);
           if (saved.parentPhotoUri) setParentPhotoUriState(saved.parentPhotoUri);
           if (saved.childPhotoUri) setChildPhotoUriState(saved.childPhotoUri);
+          if (saved.hasSeenOnboarding) setHasSeenOnboarding(saved.hasSeenOnboarding);
         }
       })
       .finally(() => setIsLoaded(true));
@@ -106,11 +110,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         callHistory,
         parentPhotoUri,
         childPhotoUri,
+        hasSeenOnboarding,
         ...updates,
       };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     },
-    [role, parentName, parentPhone, childName, hasPendingNotification, pendingMessage, callHistory, parentPhotoUri, childPhotoUri]
+    [role, parentName, parentPhone, childName, hasPendingNotification, pendingMessage, callHistory, parentPhotoUri, childPhotoUri, hasSeenOnboarding]
   );
 
   const setRole = useCallback(
@@ -137,6 +142,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (uri: string | null) => { setChildPhotoUriState(uri); persist({ childPhotoUri: uri }); },
     [persist]
   );
+  const completeOnboarding = useCallback(() => {
+    setHasSeenOnboarding(true);
+    persist({ hasSeenOnboarding: true });
+  }, [persist]);
   const sendReminder = useCallback(
     (message: string) => {
       setHasPendingNotification(true);
@@ -180,6 +189,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         callHistory, logCall, currentStreak,
         parentPhotoUri, setParentPhotoUri,
         childPhotoUri, setChildPhotoUri,
+        hasSeenOnboarding, completeOnboarding,
         isLoaded,
       }}
     >

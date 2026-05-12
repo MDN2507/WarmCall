@@ -78,7 +78,13 @@ export default function WelcomeScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { setRole } = useApp();
+  const { setRole, hasSeenOnboarding, isLoaded } = useApp();
+
+  useEffect(() => {
+    if (isLoaded && !hasSeenOnboarding) {
+      router.replace("/(tabs)/onboarding");
+    }
+  }, [isLoaded, hasSeenOnboarding]);
 
   const heroScale = useRef(new Animated.Value(1.06)).current;
   const panelSlide = useRef(new Animated.Value(40)).current;
