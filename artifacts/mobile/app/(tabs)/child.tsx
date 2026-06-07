@@ -2,7 +2,8 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import { Audio } from "expo-av";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -395,6 +396,65 @@ export default function ChildScreen() {
   const [contactModal, setContactModal] = useState<{ visible: boolean; contact: Partial<ParentContact> | null }>({ visible: false, contact: null });
   const [reminderSentFor, setReminderSentFor] = useState<string | null>(null);
   const checkScale = useRef(new Animated.Value(0)).current;
+
+  // Warm chime on mount
+  useEffect(() => {
+    let sound: Audio.Sound | null = null;
+
+    const playChimeWeb = () => {
+      try {
+        const AudioContextClass =
+          (typeof window !== "undefined" &&
+            (window.AudioContext ||
+              (window as unknown as { webkitAudioContext: typeof AudioContext })
+                .webkitAudioContext)) ||
+          null;
+        if (!AudioContextClass) return;
+        const ctx = new AudioContextClass();
+        // Gentle descending: G5 → E5 → C5
+        const notes = [783.99, 659.25, 523.25];
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = "sine";
+          const t = ctx.currentTime + i * 0.1;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.11, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+          osc.start(t);
+          osc.stop(t + 1.4);
+        });
+      } catch (_) {}
+    };
+
+    const playChimeNative = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+        });
+        const { sound: s } = await Audio.Sound.createAsync(
+          require("@/assets/sounds/chime-child.wav"),
+          { volume: 0.55, shouldPlay: true }
+        );
+        sound = s;
+      } catch (_) {}
+    };
+
+    if (Platform.OS === "web") {
+      playChimeWeb();
+    } else {
+      playChimeNative();
+    }
+
+    return () => {
+      sound?.stopAsync().finally(() => sound?.unloadAsync());
+    };
+  }, []);
 
   const handleCall = (contact: ParentContact) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
