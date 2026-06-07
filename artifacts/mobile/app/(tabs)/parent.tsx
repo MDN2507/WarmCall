@@ -105,16 +105,61 @@ export default function ParentScreen() {
 
   // Play warm chime on mount
   useEffect(() => {
-    if (Platform.OS === "web") return;
     let sound: Audio.Sound | null = null;
-    Audio.Sound.createAsync(
-      require("@/assets/sounds/chime.wav"),
-      { volume: 0.55 }
-    ).then(({ sound: s }) => {
-      sound = s;
-      s.playAsync();
-    }).catch(() => {});
-    return () => { sound?.unloadAsync(); };
+
+    const playChimeWeb = () => {
+      try {
+        const AudioContextClass =
+          (typeof window !== "undefined" &&
+            (window.AudioContext ||
+              (window as unknown as { webkitAudioContext: typeof AudioContext })
+                .webkitAudioContext)) ||
+          null;
+        if (!AudioContextClass) return;
+        const ctx = new AudioContextClass();
+        // Warm C-major arpeggio: C5 → E5 → G5 → C6
+        const freqs = [523.25, 659.25, 783.99, 1046.5];
+        freqs.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = "sine";
+          const t = ctx.currentTime + i * 0.08;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.13, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 1.6);
+          osc.start(t);
+          osc.stop(t + 1.6);
+        });
+      } catch (_) {}
+    };
+
+    const playChimeNative = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+        });
+        const { sound: s } = await Audio.Sound.createAsync(
+          require("@/assets/sounds/chime.wav"),
+          { volume: 0.6, shouldPlay: true }
+        );
+        sound = s;
+      } catch (_) {}
+    };
+
+    if (Platform.OS === "web") {
+      playChimeWeb();
+    } else {
+      playChimeNative();
+    }
+
+    return () => {
+      sound?.stopAsync().finally(() => sound?.unloadAsync());
+    };
   }, []);
 
   useEffect(() => {
