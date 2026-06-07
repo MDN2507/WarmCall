@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -14,11 +15,12 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp, type ParentMood } from "@/context/AppContext";
+import { useApp, type ParentContact, type ParentMood } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { formatReminderTime } from "@/utils/notifications";
 
@@ -27,16 +29,6 @@ const MOOD_MAP: Record<NonNullable<ParentMood>, { emoji: string; label: string; 
   okay: { emoji: "😐", label: "Так себе", color: "#D4943A" },
   miss: { emoji: "🥺", label: "Скучает", color: "#E07070" },
 };
-
-const REMINDER_MESSAGES = [
-  "Сегодня хорошая погода — как у мамы в саду?",
-  "Папа смотрел телепередачу, как у него дела?",
-  "Давно не говорили — скучаю по тебе!",
-  "Как твои ноги? Не забудь про лекарства!",
-  "Что приготовила сегодня на обед?",
-  "Как соседи? Расскажи последние новости!",
-  "Думаю о тебе — просто хотел/а напомнить о себе",
-];
 
 const TOPICS = [
   ["О погоде", "Какая сегодня погода у тебя?"],
@@ -49,55 +41,13 @@ const TOPICS = [
   ["О погоде в саду", "Как твой огород?"],
 ];
 
-function ActionButton({
-  icon,
-  label,
-  subtitle,
-  color,
-  onPress,
-}: {
-  icon: string;
-  label: string;
-  subtitle: string;
-  color: string;
-  onPress: () => void;
-}) {
-  const colors = useColors();
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
-  };
-  const handlePressOut = () => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-  };
-
-  return (
-    <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-      <Animated.View
-        style={[
-          styles.actionBtn,
-          { backgroundColor: color, transform: [{ scale }] },
-        ]}
-      >
-        <View style={styles.actionBtnLeft}>
-          <View style={[styles.actionIconCircle, { backgroundColor: "rgba(255,255,255,0.3)" }]}>
-            <Feather name={icon as "phone"} size={26} color="#fff" />
-          </View>
-          <View>
-            <Text style={[styles.actionLabel, { fontFamily: "Nunito_700Bold" }]}>
-              {label}
-            </Text>
-            <Text style={[styles.actionSubtitle, { fontFamily: "Nunito_400Regular" }]}>
-              {subtitle}
-            </Text>
-          </View>
-        </View>
-        <Feather name="chevron-right" size={22} color="rgba(255,255,255,0.7)" />
-      </Animated.View>
-    </Pressable>
-  );
-}
+const REMINDER_MESSAGES = [
+  "Сегодня хорошая погода — как у мамы в саду?",
+  "Давно не говорили — скучаю по тебе!",
+  "Думаю о тебе — просто хотел/а напомнить о себе",
+  "Как твои ноги? Не забудь про лекарства!",
+  "Что приготовила сегодня на обед?",
+];
 
 const TIME_PRESETS = [
   { label: "9:00", hour: 9, minute: 0 },
@@ -107,28 +57,250 @@ const TIME_PRESETS = [
   { label: "21:00", hour: 21, minute: 0 },
 ];
 
-function ReminderModal({
+// ────────────────────────── Contact Card ──────────────────────────
+
+function ContactCard({
+  contact,
+  mood,
+  onCall,
+  onSendReminder,
+  onTopics,
+  onEdit,
+}: {
+  contact: ParentContact;
+  mood: ParentMood;
+  onCall: () => void;
+  onSendReminder: () => void;
+  onTopics: () => void;
+  onEdit: () => void;
+}) {
+  const colors = useColors();
+  const callScale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => Animated.spring(callScale, { toValue: 0.95, useNativeDriver: true }).start();
+  const handlePressOut = () => Animated.spring(callScale, { toValue: 1, useNativeDriver: true }).start();
+
+  return (
+    <View style={[styles.contactCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      {/* Top row: avatar + info + call button */}
+      <View style={styles.contactTopRow}>
+        <Pressable onPress={onEdit} style={styles.contactAvatarWrap}>
+          <View style={[styles.contactAvatarRing, { borderColor: colors.accent }]}>
+            {contact.photoUri ? (
+              <Image source={{ uri: contact.photoUri }} style={styles.contactAvatar} />
+            ) : (
+              <View style={[styles.contactAvatarPlaceholder, { backgroundColor: colors.accent }]}>
+                <Feather name="user" size={28} color={colors.mutedForeground} />
+              </View>
+            )}
+          </View>
+          <View style={[styles.editBadge, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Feather name="edit-2" size={11} color={colors.mutedForeground} />
+          </View>
+        </Pressable>
+
+        <View style={styles.contactInfo}>
+          <Text style={[styles.contactName, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
+            {contact.name}
+          </Text>
+          <Text style={[styles.contactRelation, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+            {contact.relation}
+          </Text>
+          <Text style={[styles.contactPhone, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+            {contact.phone}
+          </Text>
+          {mood && MOOD_MAP[mood] && (
+            <View style={[styles.moodChip, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={styles.moodChipEmoji}>{MOOD_MAP[mood].emoji}</Text>
+              <Text style={[styles.moodChipText, { color: MOOD_MAP[mood].color, fontFamily: "Nunito_600SemiBold" }]}>
+                {MOOD_MAP[mood].label}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <Pressable onPress={onCall} onPressIn={handlePressIn} onPressOut={handlePressOut}>
+          <Animated.View style={[styles.callBtn, { backgroundColor: colors.primary, transform: [{ scale: callScale }] }]}>
+            <Feather name="phone-call" size={26} color="#fff" />
+            <Text style={[styles.callBtnText, { fontFamily: "Nunito_700Bold" }]}>Позвонить</Text>
+          </Animated.View>
+        </Pressable>
+      </View>
+
+      {/* Bottom row: secondary actions */}
+      <View style={[styles.contactActions, { borderTopColor: colors.border }]}>
+        <Pressable style={styles.contactAction} onPress={onSendReminder}>
+          <Feather name="send" size={16} color={colors.primary} />
+          <Text style={[styles.contactActionText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
+            Напоминание
+          </Text>
+        </Pressable>
+        <View style={[styles.actionDivider, { backgroundColor: colors.border }]} />
+        <Pressable style={styles.contactAction} onPress={onTopics}>
+          <Feather name="message-circle" size={16} color={colors.primary} />
+          <Text style={[styles.contactActionText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
+            Темы
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ────────────────────────── Add/Edit Contact Modal ──────────────────────────
+
+function ContactModal({
   visible,
+  initial,
   onClose,
+  onSave,
+  onDelete,
 }: {
   visible: boolean;
+  initial: Partial<ParentContact> | null;
   onClose: () => void;
+  onSave: (data: Omit<ParentContact, "id">) => void;
+  onDelete?: () => void;
 }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { reminderEnabled, reminderHour, reminderMinute, setReminder } = useApp();
+  const [name, setName] = useState(initial?.name ?? "");
+  const [phone, setPhone] = useState(initial?.phone ?? "");
+  const [relation, setRelation] = useState(initial?.relation ?? "Родитель");
+  const [photoUri, setPhotoUri] = useState<string | null>(initial?.photoUri ?? null);
 
+  React.useEffect(() => {
+    if (visible) {
+      setName(initial?.name ?? "");
+      setPhone(initial?.phone ?? "");
+      setRelation(initial?.relation ?? "Родитель");
+      setPhotoUri(initial?.photoUri ?? null);
+    }
+  }, [visible, initial]);
+
+  const handlePickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") return;
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+    if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+  };
+
+  const canSave = name.trim().length > 0 && phone.trim().length > 0;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.modalSheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
+            {initial?.id ? "Редактировать" : "Новый родственник"}
+          </Text>
+
+          {/* Photo picker */}
+          <Pressable onPress={handlePickPhoto} style={styles.modalPhotoWrap}>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={styles.modalPhoto} />
+            ) : (
+              <View style={[styles.modalPhotoPlaceholder, { backgroundColor: colors.accent }]}>
+                <Feather name="camera" size={28} color={colors.mutedForeground} />
+              </View>
+            )}
+            <Text style={[styles.modalPhotoHint, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+              {photoUri ? "Изменить фото" : "Добавить фото"}
+            </Text>
+          </Pressable>
+
+          {/* Fields */}
+          {[
+            { label: "Имя", value: name, onChange: setName, placeholder: "Мама", icon: "user", kb: "default" as const },
+            { label: "Как называть", value: relation, onChange: setRelation, placeholder: "Родитель", icon: "heart", kb: "default" as const },
+            { label: "Номер телефона", value: phone, onChange: setPhone, placeholder: "+7 900 000 0000", icon: "phone", kb: "phone-pad" as const },
+          ].map((f) => (
+            <View key={f.label} style={styles.modalField}>
+              <Text style={[styles.modalFieldLabel, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>{f.label}</Text>
+              <View style={[styles.modalInput, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Feather name={f.icon as "user"} size={18} color={colors.mutedForeground} />
+                <TextInput
+                  value={f.value}
+                  onChangeText={f.onChange}
+                  placeholder={f.placeholder}
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType={f.kb}
+                  style={[styles.modalInputText, { color: colors.text, fontFamily: "Nunito_400Regular" }]}
+                />
+              </View>
+            </View>
+          ))}
+
+          <Pressable
+            style={[styles.modalSaveBtn, { backgroundColor: canSave ? colors.primary : colors.muted }]}
+            onPress={canSave ? () => onSave({ name: name.trim(), phone: phone.trim(), relation: relation.trim() || "Родитель", photoUri }) : undefined}
+          >
+            <Feather name="check" size={20} color="#fff" />
+            <Text style={[styles.modalSaveBtnText, { fontFamily: "Nunito_700Bold" }]}>Сохранить</Text>
+          </Pressable>
+
+          {onDelete && (
+            <Pressable style={[styles.modalDeleteBtn, { borderColor: "#E07070" }]} onPress={onDelete}>
+              <Feather name="trash-2" size={18} color="#E07070" />
+              <Text style={[styles.modalDeleteText, { fontFamily: "Nunito_600SemiBold" }]}>Удалить контакт</Text>
+            </Pressable>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ────────────────────────── Topics Modal ──────────────────────────
+
+function TopicsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const [topics] = useState(() => [...TOPICS].sort(() => Math.random() - 0.5).slice(0, 3));
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.modalSheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>Темы для разговора</Text>
+          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>Выбери, о чём спросить сегодня</Text>
+          <View style={styles.topicsList}>
+            {topics.map(([title, desc], i) => (
+              <Pressable key={i} style={[styles.topicCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={onClose}>
+                <View style={[styles.topicNumber, { backgroundColor: colors.accent }]}>
+                  <Text style={[styles.topicNumberText, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>{i + 1}</Text>
+                </View>
+                <View style={styles.topicTextBlock}>
+                  <Text style={[styles.topicTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>{title}</Text>
+                  <Text style={[styles.topicDesc, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>{desc}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]} onPress={onClose}>
+            <Text style={[styles.modalSaveBtnText, { fontFamily: "Nunito_700Bold" }]}>Понятно, спасибо!</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ────────────────────────── Reminder Modal ──────────────────────────
+
+function ReminderModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const { reminderEnabled, reminderHour, reminderMinute, setReminder, contacts } = useApp();
   const [localEnabled, setLocalEnabled] = useState(reminderEnabled);
   const [localHour, setLocalHour] = useState(reminderHour);
   const [localMinute, setLocalMinute] = useState(reminderMinute);
   const [saving, setSaving] = useState(false);
 
   React.useEffect(() => {
-    if (visible) {
-      setLocalEnabled(reminderEnabled);
-      setLocalHour(reminderHour);
-      setLocalMinute(reminderMinute);
-    }
+    if (visible) { setLocalEnabled(reminderEnabled); setLocalHour(reminderHour); setLocalMinute(reminderMinute); }
   }, [visible, reminderEnabled, reminderHour, reminderMinute]);
 
   const handleSave = async () => {
@@ -143,23 +315,15 @@ function ReminderModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable
-          style={[
-            styles.modalSheet,
-            { backgroundColor: colors.background, paddingBottom: insets.bottom + 24 },
-          ]}
-        >
+        <Pressable style={[styles.modalSheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 24 }]}>
           <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-
-          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
-            Напоминание о звонке
-          </Text>
+          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>Напоминание о звонке</Text>
 
           {isWeb ? (
             <View style={[styles.webNotice, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={styles.webNoticeEmoji}>📱</Text>
               <Text style={[styles.webNoticeText, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-                Push-уведомления работают только в мобильном приложении. Установите Expo Go и откройте приложение там!
+                Push-уведомления работают только в мобильном приложении
               </Text>
             </View>
           ) : (
@@ -168,67 +332,32 @@ function ReminderModal({
                 <View style={styles.reminderToggleLeft}>
                   <Text style={styles.reminderToggleEmoji}>🔔</Text>
                   <View>
-                    <Text style={[styles.reminderToggleTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
-                      Ежедневное напоминание
-                    </Text>
+                    <Text style={[styles.reminderToggleTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>Ежедневное напоминание</Text>
                     <Text style={[styles.reminderToggleSub, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-                      {localEnabled
-                        ? `Каждый день в ${formatReminderTime(localHour, localMinute)}`
-                        : "Выключено"}
+                      {localEnabled ? `Каждый день в ${formatReminderTime(localHour, localMinute)}` : "Выключено"}
                     </Text>
                   </View>
                 </View>
-                <Switch
-                  value={localEnabled}
-                  onValueChange={setLocalEnabled}
-                  trackColor={{ false: colors.border, true: colors.primary }}
-                  thumbColor="#fff"
-                />
+                <Switch value={localEnabled} onValueChange={setLocalEnabled} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
               </View>
-
               {localEnabled && (
                 <>
-                  <Text style={[styles.timeLabel, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>
-                    Выбери время
-                  </Text>
+                  <Text style={[styles.timeLabel, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>Выбери время</Text>
                   <View style={styles.timePresets}>
-                    {TIME_PRESETS.map((preset) => {
-                      const active = preset.hour === localHour && preset.minute === localMinute;
+                    {TIME_PRESETS.map((p) => {
+                      const active = p.hour === localHour && p.minute === localMinute;
                       return (
-                        <Pressable
-                          key={preset.label}
-                          onPress={() => {
-                            setLocalHour(preset.hour);
-                            setLocalMinute(preset.minute);
-                          }}
-                          style={[
-                            styles.timeChip,
-                            {
-                              backgroundColor: active ? colors.primary : colors.card,
-                              borderColor: active ? colors.primary : colors.border,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.timeChipText,
-                              {
-                                color: active ? "#fff" : colors.text,
-                                fontFamily: "Nunito_700Bold",
-                              },
-                            ]}
-                          >
-                            {preset.label}
-                          </Text>
+                        <Pressable key={p.label} onPress={() => { setLocalHour(p.hour); setLocalMinute(p.minute); }}
+                          style={[styles.timeChip, { backgroundColor: active ? colors.primary : colors.card, borderColor: active ? colors.primary : colors.border }]}>
+                          <Text style={[styles.timeChipText, { color: active ? "#fff" : colors.text, fontFamily: "Nunito_700Bold" }]}>{p.label}</Text>
                         </Pressable>
                       );
                     })}
                   </View>
-
                   <View style={[styles.reminderPreview, { backgroundColor: colors.card, borderColor: colors.accent }]}>
                     <Text style={styles.reminderPreviewEmoji}>💛</Text>
                     <Text style={[styles.reminderPreviewText, { color: colors.text, fontFamily: "Nunito_400Regular" }]}>
-                      «Ты сегодня ещё не звонил маме. Она будет рада услышать тебя!»
+                      «Ты сегодня ещё не позвонил {contacts[0]?.name ?? "маме"}. Она будет рада услышать тебя!»
                     </Text>
                   </View>
                 </>
@@ -236,13 +365,10 @@ function ReminderModal({
             </>
           )}
 
-          <Pressable
-            style={[styles.shareBtn, { backgroundColor: isWeb ? colors.border : colors.primary, opacity: saving ? 0.7 : 1 }]}
-            onPress={isWeb ? onClose : handleSave}
-            disabled={saving}
-          >
-            <Feather name={isWeb ? "x" : "check"} size={22} color="#fff" />
-            <Text style={[styles.shareBtnText, { fontFamily: "Nunito_700Bold" }]}>
+          <Pressable style={[styles.modalSaveBtn, { backgroundColor: isWeb ? colors.border : colors.primary, opacity: saving ? 0.7 : 1 }]}
+            onPress={isWeb ? onClose : handleSave} disabled={saving}>
+            <Feather name={isWeb ? "x" : "check"} size={20} color="#fff" />
+            <Text style={[styles.modalSaveBtnText, { fontFamily: "Nunito_700Bold" }]}>
               {isWeb ? "Закрыть" : saving ? "Сохраняю…" : "Сохранить"}
             </Text>
           </Pressable>
@@ -252,182 +378,74 @@ function ReminderModal({
   );
 }
 
-const INVITE_STEPS = [
-  { icon: "download", text: "Скачай приложение «Тёплый звонок»" },
-  { icon: "user", text: "Выбери «Я родитель»" },
-  { icon: "phone-incoming", text: "Жди тёплого звонка от меня!" },
-];
-
-function InviteModal({ visible, onClose, childName }: { visible: boolean; onClose: () => void; childName: string }) {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const heartScale = useRef(new Animated.Value(1)).current;
-
-  React.useEffect(() => {
-    if (!visible) return;
-    Animated.loop(
-      Animated.sequence([
-        Animated.spring(heartScale, { toValue: 1.15, useNativeDriver: true }),
-        Animated.spring(heartScale, { toValue: 1, useNativeDriver: true }),
-      ])
-    ).start();
-    return () => heartScale.stopAnimation();
-  }, [visible]);
-
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message:
-          `💛 Привет! Это ${childName}.\n\n` +
-          `Я хочу звонить тебе чаще — установи приложение «Тёплый звонок», и это будет так просто!\n\n` +
-          `📱 Для Android: https://play.google.com/store\n` +
-          `🍎 Для iPhone: https://apps.apple.com\n\n` +
-          `Выбери «Я родитель» и жди моего звонка. Люблю тебя! ❤️`,
-        title: "Тёплый звонок — приложение для связи с близкими",
-      });
-    } catch (_) {}
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={[styles.modalSheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 24 }]}>
-          <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-
-          <Animated.Text style={[styles.inviteEmoji, { transform: [{ scale: heartScale }] }]}>
-            💌
-          </Animated.Text>
-
-          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
-            Пригласи маму{"\n"}в приложение
-          </Text>
-          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-            Отправь ссылку — она всё сделает сама!
-          </Text>
-
-          <View style={[styles.inviteSteps, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {INVITE_STEPS.map((step, i) => (
-              <View key={i} style={styles.inviteStep}>
-                <View style={[styles.stepNumCircle, { backgroundColor: colors.accent }]}>
-                  <Feather name={step.icon as "download"} size={16} color={colors.text} />
-                </View>
-                <Text style={[styles.stepText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
-                  {step.text}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          <Pressable
-            style={[styles.shareBtn, { backgroundColor: colors.primary }]}
-            onPress={handleShare}
-          >
-            <Feather name="share-2" size={22} color="#fff" />
-            <Text style={[styles.shareBtnText, { fontFamily: "Nunito_700Bold" }]}>
-              Поделиться ссылкой
-            </Text>
-          </Pressable>
-
-          <Pressable onPress={onClose} style={styles.cancelLink}>
-            <Text style={[styles.cancelText, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>
-              Закрыть
-            </Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function TopicsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const [topics] = useState(() => {
-    const shuffled = [...TOPICS].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 3);
-  });
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={[styles.modalSheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 24 }]}>
-          <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
-            Темы для разговора
-          </Text>
-          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-            Выбери, о чём спросить сегодня
-          </Text>
-          <View style={styles.topicsList}>
-            {topics.map(([title, desc], i) => (
-              <Pressable
-                key={i}
-                style={[styles.topicCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={onClose}
-              >
-                <View style={[styles.topicNumber, { backgroundColor: colors.accent }]}>
-                  <Text style={[styles.topicNumberText, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
-                    {i + 1}
-                  </Text>
-                </View>
-                <View style={styles.topicTextBlock}>
-                  <Text style={[styles.topicTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
-                    {title}
-                  </Text>
-                  <Text style={[styles.topicDesc, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-                    {desc}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-          <Pressable
-            style={[styles.closeBtn, { backgroundColor: colors.primary }]}
-            onPress={onClose}
-          >
-            <Text style={[styles.closeBtnText, { fontFamily: "Nunito_700Bold" }]}>
-              Понятно, спасибо!
-            </Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
+// ────────────────────────── Main Screen ──────────────────────────
 
 export default function ChildScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { parentName, parentPhone, sendReminder, logCall, currentStreak, parentPhotoUri, childName, reminderEnabled, reminderHour, reminderMinute, parentMood } = useApp();
+  const {
+    contacts, addContact, updateContact, removeContact,
+    childName, sendReminder, logCall, currentStreak,
+    parentMood, reminderEnabled, reminderHour, reminderMinute,
+  } = useApp();
+
   const [topicsVisible, setTopicsVisible] = useState(false);
-  const [inviteVisible, setInviteVisible] = useState(false);
   const [reminderVisible, setReminderVisible] = useState(false);
-  const [reminderSent, setReminderSent] = useState(false);
+  const [contactModal, setContactModal] = useState<{ visible: boolean; contact: Partial<ParentContact> | null }>({ visible: false, contact: null });
+  const [reminderSentFor, setReminderSentFor] = useState<string | null>(null);
   const checkScale = useRef(new Animated.Value(0)).current;
 
-  const getRandomMessage = () =>
-    REMINDER_MESSAGES[Math.floor(Math.random() * REMINDER_MESSAGES.length)];
+  const handleCall = (contact: ParentContact) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    logCall(contact.name);
+    Linking.openURL(`tel:${contact.phone.replace(/\s/g, "")}`);
+    setTimeout(() => router.push("/(tabs)/feedback"), 1000);
+  };
 
-  const handleReminder = () => {
+  const handleSendReminder = (contact: ParentContact) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const msg = getRandomMessage();
+    const msg = REMINDER_MESSAGES[Math.floor(Math.random() * REMINDER_MESSAGES.length)];
     sendReminder(msg);
-    setReminderSent(true);
+    setReminderSentFor(contact.id);
     Animated.spring(checkScale, { toValue: 1, useNativeDriver: true }).start();
     setTimeout(() => {
-      setReminderSent(false);
+      setReminderSentFor(null);
       Animated.timing(checkScale, { toValue: 0, duration: 200, useNativeDriver: true }).start();
     }, 3000);
   };
 
-  const handleCall = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    logCall();
-    Linking.openURL(`tel:${parentPhone.replace(/\s/g, "")}`);
-    setTimeout(() => {
-      router.push("/(tabs)/feedback");
-    }, 1000);
+  const openAddContact = () => setContactModal({ visible: true, contact: null });
+  const openEditContact = (c: ParentContact) => setContactModal({ visible: true, contact: c });
+  const closeContactModal = () => setContactModal({ visible: false, contact: null });
+
+  const handleSaveContact = (data: Omit<ParentContact, "id">) => {
+    if (contactModal.contact?.id) {
+      updateContact(contactModal.contact.id, data);
+    } else {
+      addContact(data);
+    }
+    closeContactModal();
+  };
+
+  const handleDeleteContact = () => {
+    if (contactModal.contact?.id) {
+      removeContact(contactModal.contact.id);
+    }
+    closeContactModal();
+  };
+
+  const handleShareApp = async () => {
+    try {
+      await Share.share({
+        message:
+          `💛 Привет! Это ${childName}.\n\n` +
+          `Я хочу звонить тебе чаще — установи приложение «Тёплый звонок»!\n\n` +
+          `📱 Android: https://play.google.com/store\n🍎 iPhone: https://apps.apple.com\n\n` +
+          `Выбери «Я родитель» и жди моего звонка. Люблю тебя! ❤️`,
+        title: "Тёплый звонок",
+      });
+    } catch (_) {}
   };
 
   return (
@@ -439,10 +457,7 @@ export default function ChildScreen() {
         <Text style={[styles.headerTitle, { color: colors.mutedForeground, fontFamily: "Nunito_600SemiBold" }]}>
           Тёплый звонок
         </Text>
-        <Pressable
-          onPress={() => router.push("/(tabs)/profile")}
-          style={styles.backBtn}
-        >
+        <Pressable onPress={() => router.push("/(tabs)/profile")} style={styles.backBtn}>
           <Feather name="edit-2" size={20} color={colors.text} />
         </Pressable>
       </View>
@@ -451,140 +466,95 @@ export default function ChildScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.parentCard}>
-          <View style={[styles.parentAvatarRing, { borderColor: colors.accent }]}>
-            <Image
-              source={
-                parentPhotoUri
-                  ? { uri: parentPhotoUri }
-                  : require("@/assets/images/parent-placeholder.png")
-              }
-              style={styles.parentAvatar}
-            />
-          </View>
-          <Text style={[styles.parentLabel, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-            Связь с
+        {/* Section: Contacts */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
+            Позвони близким
           </Text>
-          <Text style={[styles.parentName, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
-            {parentName}
-          </Text>
+          {currentStreak > 0 && (
+            <View style={[styles.streakBadge, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.streakText, { fontFamily: "Nunito_700Bold" }]}>{currentStreak} 🔥</Text>
+            </View>
+          )}
         </View>
 
-        {parentMood && MOOD_MAP[parentMood] && (
-          <View style={[styles.moodBanner, { backgroundColor: colors.card, borderColor: colors.accent }]}>
-            <Text style={styles.moodBannerEmoji}>{MOOD_MAP[parentMood].emoji}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.moodBannerTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
-                {parentName} сейчас
-              </Text>
-              <Text style={[styles.moodBannerValue, { color: MOOD_MAP[parentMood].color, fontFamily: "Nunito_800ExtraBold" }]}>
-                {MOOD_MAP[parentMood].label}
-              </Text>
-            </View>
-            {parentMood === "miss" && (
-              <Pressable
-                style={[styles.moodCallNow, { backgroundColor: colors.primary }]}
-                onPress={handleCall}
-              >
-                <Feather name="phone" size={18} color="#fff" />
-                <Text style={[styles.moodCallNowText, { fontFamily: "Nunito_700Bold" }]}>Позвонить</Text>
-              </Pressable>
-            )}
+        {contacts.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={styles.emptyEmoji}>👵</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
+              Добавь первого родственника
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
+              Нажми «+» чтобы добавить маму, папу или бабушку
+            </Text>
           </View>
+        ) : (
+          contacts.map((contact) => (
+            <View key={contact.id}>
+              <ContactCard
+                contact={contact}
+                mood={parentMood}
+                onCall={() => handleCall(contact)}
+                onSendReminder={() => handleSendReminder(contact)}
+                onTopics={() => setTopicsVisible(true)}
+                onEdit={() => openEditContact(contact)}
+              />
+              {reminderSentFor === contact.id && (
+                <Animated.View style={[styles.sentBanner, { backgroundColor: colors.card, borderColor: colors.border, transform: [{ scale: checkScale }] }]}>
+                  <Feather name="check-circle" size={20} color="#5DAA68" />
+                  <Text style={[styles.sentText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
+                    {contact.name} знает, что ты думаешь о ней
+                  </Text>
+                </Animated.View>
+              )}
+            </View>
+          ))
         )}
 
-        <View style={styles.actions}>
-          <ActionButton
-            icon="send"
-            label="Тёплое напоминание"
-            subtitle="Отправить сигнал заботы"
-            color={colors.secondary}
-            onPress={handleReminder}
-          />
+        {/* Add contact button */}
+        <Pressable
+          style={[styles.addContactBtn, { backgroundColor: colors.card, borderColor: colors.accent }]}
+          onPress={openAddContact}
+        >
+          <View style={[styles.addContactIcon, { backgroundColor: colors.accent }]}>
+            <Feather name="user-plus" size={20} color={colors.text} />
+          </View>
+          <Text style={[styles.addContactText, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
+            Добавить родственника
+          </Text>
+          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+        </Pressable>
 
-          {reminderSent && (
-            <Animated.View
-              style={[
-                styles.sentBanner,
-                { backgroundColor: colors.card, borderColor: colors.border, transform: [{ scale: checkScale }] },
-              ]}
-            >
-              <Feather name="check-circle" size={20} color="#5DAA68" />
-              <Text style={[styles.sentText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
-                Родитель знает, что ты думаешь о нём
-              </Text>
-            </Animated.View>
-          )}
-
-          <ActionButton
-            icon="phone-call"
-            label="Быстрый звонок"
-            subtitle={parentPhone}
-            color={colors.primary}
-            onPress={handleCall}
-          />
-
-          <ActionButton
-            icon="message-circle"
-            label="Темы для разговора"
-            subtitle="3 идеи, о чём поговорить"
-            color={colors.accent}
-            onPress={() => setTopicsVisible(true)}
-          />
+        {/* Utility row */}
+        <View style={styles.utilRow}>
+          <Pressable
+            style={[styles.utilBtn, { backgroundColor: reminderEnabled ? colors.primary : colors.card, borderColor: reminderEnabled ? colors.primary : colors.border }]}
+            onPress={() => setReminderVisible(true)}
+          >
+            <Text style={styles.utilEmoji}>{reminderEnabled ? "🔔" : "🔕"}</Text>
+            <Text style={[styles.utilLabel, { color: reminderEnabled ? "#fff" : colors.text, fontFamily: "Nunito_600SemiBold" }]}>
+              {reminderEnabled ? formatReminderTime(reminderHour, reminderMinute) : "Напоминание"}
+            </Text>
+          </Pressable>
 
           <Pressable
-            style={[styles.historyBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[styles.utilBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => router.push("/(tabs)/history")}
           >
-            <Feather name="clock" size={20} color={colors.mutedForeground} />
-            <Text style={[styles.historyBtnText, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>
-              История звонков
-            </Text>
-            {currentStreak > 0 && (
-              <View style={[styles.streakBadge, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.streakBadgeText, { fontFamily: "Nunito_700Bold" }]}>
-                  {currentStreak} 🔥
-                </Text>
-              </View>
-            )}
-            <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+            <Text style={styles.utilEmoji}>📋</Text>
+            <Text style={[styles.utilLabel, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>История</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.utilBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={handleShareApp}
+          >
+            <Text style={styles.utilEmoji}>💌</Text>
+            <Text style={[styles.utilLabel, { color: colors.text, fontFamily: "Nunito_600SemiBold" }]}>Пригласить</Text>
           </Pressable>
         </View>
 
-        <Pressable
-          style={[styles.inviteBtn, { backgroundColor: colors.card, borderColor: reminderEnabled ? colors.primary : colors.border }]}
-          onPress={() => setReminderVisible(true)}
-        >
-          <Text style={styles.inviteBtnEmoji}>{reminderEnabled ? "🔔" : "🔕"}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.inviteBtnTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
-              Напоминание о звонке
-            </Text>
-            <Text style={[styles.inviteBtnSub, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-              {reminderEnabled
-                ? `Каждый день в ${formatReminderTime(reminderHour, reminderMinute)}`
-                : "Нажми, чтобы включить"}
-            </Text>
-          </View>
-          <Feather name="bell" size={20} color={reminderEnabled ? colors.primary : colors.mutedForeground} />
-        </Pressable>
-
-        <Pressable
-          style={[styles.inviteBtn, { backgroundColor: colors.card, borderColor: colors.accent }]}
-          onPress={() => setInviteVisible(true)}
-        >
-          <Text style={styles.inviteBtnEmoji}>💌</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.inviteBtnTitle, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
-              Пригласить маму в приложение
-            </Text>
-            <Text style={[styles.inviteBtnSub, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
-              Поделиться ссылкой на установку
-            </Text>
-          </View>
-          <Feather name="share-2" size={20} color={colors.primary} />
-        </Pressable>
-
+        {/* Tip */}
         <View style={[styles.tipCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Feather name="sun" size={18} color={colors.primary} />
           <Text style={[styles.tipText, { color: colors.mutedForeground, fontFamily: "Nunito_400Regular" }]}>
@@ -594,280 +564,114 @@ export default function ChildScreen() {
       </ScrollView>
 
       <TopicsModal visible={topicsVisible} onClose={() => setTopicsVisible(false)} />
-      <InviteModal visible={inviteVisible} onClose={() => setInviteVisible(false)} childName={childName} />
       <ReminderModal visible={reminderVisible} onClose={() => setReminderVisible(false)} />
+      <ContactModal
+        visible={contactModal.visible}
+        initial={contactModal.contact}
+        onClose={closeContactModal}
+        onSave={handleSaveContact}
+        onDelete={contactModal.contact?.id ? handleDeleteContact : undefined}
+      />
     </View>
   );
 }
 
+// ────────────────────────── Styles ──────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 8 },
+  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18 },
-  content: {
-    paddingHorizontal: 20,
-    gap: 20,
-    paddingTop: 8,
-  },
-  parentCard: {
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 16,
-  },
-  parentAvatarRing: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    borderWidth: 4,
-    padding: 3,
-    marginBottom: 6,
-    shadowColor: "#D4943A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  parentAvatar: {
-    width: "100%" as unknown as number,
-    height: "100%" as unknown as number,
-    borderRadius: 60,
-  },
-  parentLabel: { fontSize: 18 },
-  parentName: { fontSize: 32 },
-  actions: { gap: 14 },
-  actionBtn: {
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#D4943A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  actionBtnLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  actionIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionLabel: { fontSize: 20, color: "#fff" },
-  actionSubtitle: { fontSize: 14, color: "rgba(255,255,255,0.8)" },
-  sentBanner: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  sentText: { fontSize: 16, flex: 1 },
-  historyBtn: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  historyBtnText: { fontSize: 18, flex: 1 },
-  streakBadge: {
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  streakBadgeText: { fontSize: 14, color: "#fff" },
-  moodBanner: {
-    borderRadius: 18,
-    borderWidth: 1.5,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  moodBannerEmoji: { fontSize: 36 },
-  moodBannerTitle: { fontSize: 14 },
-  moodBannerValue: { fontSize: 22 },
-  moodCallNow: {
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  moodCallNowText: { fontSize: 14, color: "#fff" },
-  inviteBtn: {
-    borderRadius: 18,
-    borderWidth: 1.5,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  inviteBtnEmoji: { fontSize: 28 },
-  inviteBtnTitle: { fontSize: 17 },
-  inviteBtnSub: { fontSize: 14, marginTop: 2 },
-  tipCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  tipText: { fontSize: 16, flex: 1, lineHeight: 24 },
-  inviteEmoji: { fontSize: 52, textAlign: "center", marginVertical: 4 },
-  inviteSteps: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    gap: 14,
-    width: "100%",
-  },
-  inviteStep: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  stepNumCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepText: { fontSize: 16, flex: 1 },
-  shareBtn: {
-    borderRadius: 18,
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    width: "100%",
-    shadowColor: "#D4943A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  shareBtnText: { fontSize: 20, color: "#fff" },
-  cancelLink: { alignItems: "center", paddingVertical: 6 },
-  cancelText: { fontSize: 17 },
-  reminderToggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    width: "100%",
-  },
-  reminderToggleLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  reminderToggleEmoji: { fontSize: 28 },
-  reminderToggleTitle: { fontSize: 17 },
-  reminderToggleSub: { fontSize: 14, marginTop: 2 },
-  timeLabel: { fontSize: 15, alignSelf: "flex-start" },
-  timePresets: { flexDirection: "row", flexWrap: "wrap", gap: 10, width: "100%" },
-  timeChip: {
-    borderRadius: 14,
-    borderWidth: 1.5,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    minWidth: 72,
-    alignItems: "center",
-  },
-  timeChipText: { fontSize: 18 },
-  reminderPreview: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    width: "100%",
-  },
-  reminderPreviewEmoji: { fontSize: 22 },
-  reminderPreviewText: { fontSize: 15, flex: 1, lineHeight: 22, fontStyle: "italic" },
-  webNotice: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    alignItems: "center",
-    gap: 12,
-    width: "100%",
-  },
-  webNoticeEmoji: { fontSize: 40 },
-  webNoticeText: { fontSize: 16, textAlign: "center", lineHeight: 24 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    gap: 16,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 4,
-  },
-  modalTitle: { fontSize: 28, textAlign: "center" },
-  modalSubtitle: { fontSize: 17, textAlign: "center" },
-  topicsList: { gap: 12 },
-  topicCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  topicNumber: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  topicNumberText: { fontSize: 18 },
+  content: { paddingHorizontal: 20, gap: 14, paddingTop: 8 },
+
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sectionTitle: { fontSize: 26 },
+  streakBadge: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5 },
+  streakText: { fontSize: 16, color: "#fff" },
+
+  emptyCard: { borderRadius: 20, borderWidth: 1.5, borderStyle: "dashed", padding: 32, alignItems: "center", gap: 10 },
+  emptyEmoji: { fontSize: 52 },
+  emptyTitle: { fontSize: 20, textAlign: "center" },
+  emptySubtitle: { fontSize: 15, textAlign: "center", lineHeight: 22 },
+
+  contactCard: { borderRadius: 20, borderWidth: 1.5, overflow: "hidden" },
+  contactTopRow: { flexDirection: "row", alignItems: "center", padding: 16, gap: 12 },
+  contactAvatarWrap: { position: "relative" },
+  contactAvatarRing: { width: 70, height: 70, borderRadius: 35, borderWidth: 3, padding: 2 },
+  contactAvatar: { width: 62, height: 62, borderRadius: 31 },
+  contactAvatarPlaceholder: { width: 62, height: 62, borderRadius: 31, alignItems: "center", justifyContent: "center" },
+  editBadge: { position: "absolute", bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  contactInfo: { flex: 1, gap: 2 },
+  contactName: { fontSize: 20 },
+  contactRelation: { fontSize: 14 },
+  contactPhone: { fontSize: 13 },
+  moodChip: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, alignSelf: "flex-start", marginTop: 4 },
+  moodChipEmoji: { fontSize: 14 },
+  moodChipText: { fontSize: 13 },
+  callBtn: { borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, alignItems: "center", gap: 4, minWidth: 88, shadowColor: "#D4943A", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 5 },
+  callBtnText: { fontSize: 14, color: "#fff" },
+  contactActions: { flexDirection: "row", borderTopWidth: 1 },
+  contactAction: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12 },
+  contactActionText: { fontSize: 15 },
+  actionDivider: { width: 1, alignSelf: "stretch", marginVertical: 10 },
+  sentBanner: { borderRadius: 14, borderWidth: 1, padding: 12, flexDirection: "row", alignItems: "center", gap: 8, marginTop: -4 },
+  sentText: { fontSize: 15, flex: 1 },
+
+  addContactBtn: { borderRadius: 16, borderWidth: 1.5, borderStyle: "dashed", flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingVertical: 14 },
+  addContactIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  addContactText: { fontSize: 17, flex: 1 },
+
+  utilRow: { flexDirection: "row", gap: 10 },
+  utilBtn: { flex: 1, borderRadius: 14, borderWidth: 1.5, paddingVertical: 12, alignItems: "center", gap: 4 },
+  utilEmoji: { fontSize: 24 },
+  utilLabel: { fontSize: 13, textAlign: "center" },
+
+  tipCard: { borderRadius: 16, borderWidth: 1, padding: 16, flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  tipText: { fontSize: 15, flex: 1, lineHeight: 22 },
+
+  // Modals shared
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
+  modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 16 },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4 },
+  modalTitle: { fontSize: 26, textAlign: "center" },
+  modalSubtitle: { fontSize: 16, textAlign: "center", marginTop: -8 },
+  modalSaveBtn: { borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  modalSaveBtnText: { fontSize: 18, color: "#fff" },
+  modalDeleteBtn: { borderRadius: 14, borderWidth: 1.5, padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  modalDeleteText: { fontSize: 16, color: "#E07070" },
+  modalPhotoWrap: { alignItems: "center", gap: 8 },
+  modalPhoto: { width: 90, height: 90, borderRadius: 45 },
+  modalPhotoPlaceholder: { width: 90, height: 90, borderRadius: 45, alignItems: "center", justifyContent: "center" },
+  modalPhotoHint: { fontSize: 14 },
+  modalField: { gap: 6 },
+  modalFieldLabel: { fontSize: 14, marginLeft: 2 },
+  modalInput: { flexDirection: "row", alignItems: "center", borderRadius: 12, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
+  modalInputText: { flex: 1, fontSize: 17, padding: 0 },
+
+  // Topics
+  topicsList: { gap: 10 },
+  topicCard: { borderRadius: 16, borderWidth: 1, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 },
+  topicNumber: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  topicNumberText: { fontSize: 17 },
   topicTextBlock: { flex: 1, gap: 2 },
-  topicTitle: { fontSize: 20 },
-  topicDesc: { fontSize: 15 },
-  closeBtn: {
-    borderRadius: 18,
-    padding: 18,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  closeBtnText: { fontSize: 20, color: "#fff" },
+  topicTitle: { fontSize: 18 },
+  topicDesc: { fontSize: 14 },
+
+  // Reminder
+  reminderToggleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 16, borderWidth: 1, padding: 14 },
+  reminderToggleLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  reminderToggleEmoji: { fontSize: 26 },
+  reminderToggleTitle: { fontSize: 16 },
+  reminderToggleSub: { fontSize: 13, marginTop: 2 },
+  timeLabel: { fontSize: 14, alignSelf: "flex-start" },
+  timePresets: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  timeChip: { borderRadius: 12, borderWidth: 1.5, paddingHorizontal: 18, paddingVertical: 9, alignItems: "center" },
+  timeChipText: { fontSize: 16 },
+  reminderPreview: { borderRadius: 14, borderWidth: 1.5, padding: 12, flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  reminderPreviewEmoji: { fontSize: 20 },
+  reminderPreviewText: { fontSize: 14, flex: 1, lineHeight: 20, fontStyle: "italic" },
+  webNotice: { borderRadius: 14, borderWidth: 1, padding: 18, alignItems: "center", gap: 10 },
+  webNoticeEmoji: { fontSize: 36 },
+  webNoticeText: { fontSize: 15, textAlign: "center", lineHeight: 22 },
 });

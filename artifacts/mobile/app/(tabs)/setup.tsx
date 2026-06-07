@@ -166,28 +166,41 @@ export default function SetupScreen() {
   const isEdit = params.edit === "1";
   const {
     role,
-    parentName, setParentName,
+    contacts, addContact,
     parentPhone, setParentPhone,
     childName, setChildName,
-    parentPhotoUri, setParentPhotoUri,
     childPhotoUri, setChildPhotoUri,
   } = useApp();
 
   const activeRole = (params.role as "parent" | "child") ?? role;
   const isParent = activeRole === "parent";
+  const firstContact = contacts[0];
 
-  const [localParentName, setLocalParentName] = useState(parentName);
+  const [localContactName, setLocalContactName] = useState(firstContact?.name ?? "Мама");
   const [localChildName, setLocalChildName] = useState(childName);
-  const [localPhone, setLocalPhone] = useState(parentPhone);
-  const [localParentPhoto, setLocalParentPhoto] = useState<string | null>(parentPhotoUri);
+  const [localPhone, setLocalPhone] = useState(firstContact?.phone ?? parentPhone);
+  const [localContactPhoto, setLocalContactPhoto] = useState<string | null>(firstContact?.photoUri ?? null);
   const [localChildPhoto, setLocalChildPhoto] = useState<string | null>(childPhotoUri);
 
   const handleSave = () => {
-    setParentName(localParentName.trim() || "Мама");
-    setChildName(localChildName.trim() || "Маша");
-    setParentPhone(localPhone.trim() || "+7 900 000 0000");
-    setParentPhotoUri(localParentPhoto);
-    setChildPhotoUri(localChildPhoto);
+    if (isParent) {
+      setChildName(localChildName.trim() || "Маша");
+      setParentPhone(localPhone.trim() || "+7 900 000 0000");
+      setChildPhotoUri(localChildPhoto);
+    } else {
+      setParentPhone(localPhone.trim() || "+7 900 000 0000");
+      setChildName(localChildName.trim() || "Маша");
+      if (firstContact) {
+        // Update existing via profile
+      } else {
+        addContact({
+          name: localContactName.trim() || "Мама",
+          phone: localPhone.trim() || "+7 900 000 0000",
+          photoUri: localContactPhoto,
+          relation: "Родитель",
+        });
+      }
+    }
     if (isEdit) {
       router.back();
     } else if (isParent) {
@@ -198,7 +211,7 @@ export default function SetupScreen() {
   };
 
   const canSave =
-    (isParent ? localChildName.trim().length > 0 : localParentName.trim().length > 0) &&
+    (isParent ? localChildName.trim().length > 0 : localContactName.trim().length > 0) &&
     localPhone.trim().length > 0;
 
   const btnScale = useRef(new Animated.Value(1)).current;
@@ -236,8 +249,8 @@ export default function SetupScreen() {
           />
         ) : (
           <PhotoPicker
-            uri={localParentPhoto}
-            onPick={setLocalParentPhoto}
+            uri={localContactPhoto}
+            onPick={setLocalContactPhoto}
             label="Фото родителя"
             fallbackIcon="user"
           />
@@ -264,8 +277,8 @@ export default function SetupScreen() {
           ) : (
             <InputField
               label="Имя родителя"
-              value={localParentName}
-              onChange={setLocalParentName}
+              value={localContactName}
+              onChange={setLocalContactName}
               placeholder="Мама"
               icon="user"
             />

@@ -88,7 +88,7 @@ function CallItem({ record, isLast }: { record: CallRecord; isLast: boolean }) {
       </View>
       <View style={styles.callInfo}>
         <Text style={[styles.callName, { color: colors.text, fontFamily: "Nunito_700Bold" }]}>
-          {record.parentName}
+          {record.contactName ?? (record as { parentName?: string }).parentName}
         </Text>
         {record.note ? (
           <Text

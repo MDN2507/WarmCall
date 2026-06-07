@@ -167,13 +167,13 @@ export default function OnboardingScreen() {
       scrollRef.current?.scrollTo({ x: (activeIndex + 1) * width, animated: true });
     } else {
       completeOnboarding();
-      router.replace("/(tabs)/");
+      router.replace("/");
     }
   };
 
   const handleSkip = () => {
     completeOnboarding();
-    router.replace("/(tabs)/");
+    router.replace("/");
   };
 
   const isLast = activeIndex === SLIDES.length - 1;
