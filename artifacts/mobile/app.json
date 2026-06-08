@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Тёплый звонок",
-    "slug": "mobile",
+    "slug": "warm-call",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "warmcall",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -14,9 +14,23 @@
       "backgroundColor": "#FFF8F0"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mdn2507.warmcall"
     },
-    "android": {},
+    "android": {
+      "package": "com.mdn2507.warmcall",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#FFF8F0"
+      },
+      "permissions": [
+        "android.permission.CALL_PHONE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -28,11 +42,24 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-av",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FFB347"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_PROJECT_ID"
+      }
     }
   }
 }
