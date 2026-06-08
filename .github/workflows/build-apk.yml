@@ -1,0 +1,41 @@
+name: Собрать APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Собрать Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Скачать код
+        uses: actions/checkout@v4
+
+      - name: Установить Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Установить pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Установить зависимости
+        run: pnpm install
+        working-directory: artifacts/mobile
+
+      - name: Установить EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Войти в Expo
+        run: eas whoami
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        working-directory: artifacts/mobile
+
+      - name: Собрать APK
+        run: eas build -p android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        working-directory: artifacts/mobile
