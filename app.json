@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "26bff4e3-dd19-4a4f-997d-1d3f55209f95"
+      }
+    },
+    "android": {
+      "package": "com.tor2507.workspace"
+    },
+    "entryPoint": "./index.js"
+  }
+}
