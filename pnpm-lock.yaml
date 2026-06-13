@@ -91,6 +91,9 @@ importers:
 
   .:
     dependencies:
+      '@expo-google-fonts/nunito':
+        specifier: ^0.4.2
+        version: 0.4.2
       expo-asset:
         specifier: ^56.0.17
         version: 56.0.17(expo@54.0.35)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17))(typescript@5.9.3)
