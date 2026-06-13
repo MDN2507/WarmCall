@@ -28,80 +28,22 @@ export interface ParentMood {
 }
 
 interface AppContextType {
-  // Call records
   callRecords: CallRecord[];
   addCallRecord: (record: Omit<CallRecord, 'id'>) => void;
-  
-  // Parent contacts
   parentContacts: ParentContact[];
   addParentContact: (contact: Omit<ParentContact, 'id'>) => void;
   updateParentContact: (id: string, updates: Partial<ParentContact>) => void;
   deleteParentContact: (id: string) => void;
-  
-  // Parent moods
   parentMoods: ParentMood[];
   addParentMood: (mood: Omit<ParentMood, 'id'>) => void;
-  
-  // Child data
-  childName: string;
-cat > app/context/AppContext.tsx << 'EOF'
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import {
-  cancelDailyReminder,
-  scheduleDailyReminder,
-} from "../utils/notifications";
-
-export interface CallRecord {
-  id: string;
-  timestamp: number;
-  duration: number;
-  type: 'incoming' | 'outgoing';
-  status: 'completed' | 'missed' | 'cancelled';
-}
-
-export interface ParentContact {
-  id: string;
-  name: string;
-  phoneNumber: string;
-  photoUri?: string;
-  relationship: string;
-}
-
-export interface ParentMood {
-  id: string;
-  parentId: string;
-  mood: 'happy' | 'sad' | 'neutral';
-  timestamp: number;
-}
-
-interface AppContextType {
-  // Call records
-  callRecords: CallRecord[];
-  addCallRecord: (record: Omit<CallRecord, 'id'>) => void;
-  
-  // Parent contacts
-  parentContacts: ParentContact[];
-  addParentContact: (contact: Omit<ParentContact, 'id'>) => void;
-  updateParentContact: (id: string, updates: Partial<ParentContact>) => void;
-  deleteParentContact: (id: string) => void;
-  
-  // Parent moods
-  parentMoods: ParentMood[];
-  addParentMood: (mood: Omit<ParentMood, 'id'>) => void;
-  
-  // Child data
   childName: string;
   setChildName: (name: string) => void;
   childPhotoUri: string | null;
   setChildPhotoUri: (uri: string | null) => void;
-  
-  // Reminders
   reminderTime: string | null;
   setReminderTime: (time: string | null) => void;
   dailyReminderEnabled: boolean;
   setDailyReminderEnabled: (enabled: boolean) => void;
-  
-  // Onboarding
   hasCompletedOnboarding: boolean;
   completeOnboarding: () => void;
 }
@@ -160,7 +102,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setHasCompletedOnboarding(true);
   };
 
-  // Reminder handling
   useEffect(() => {
     if (dailyReminderEnabled && reminderTime) {
       const [hours, minutes] = reminderTime.split(':').map(Number);
