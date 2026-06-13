@@ -18,8 +18,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp, type ParentContact } from "../context/AppContext";
-import { useColors } from "../hooks/useColors";
+import { useApp, type ParentContact } from "./context/AppContext";
+import { useColors } from "./hooks/useColors";
 
 // ────────────────────────── Helpers ──────────────────────────
 

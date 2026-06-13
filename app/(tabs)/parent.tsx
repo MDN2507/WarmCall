@@ -16,8 +16,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Audio } from "expo-av";
 
-import { useApp, type ParentMood } from "../context/AppContext";
-import { useColors } from "../hooks/useColors";
+import { useApp, type ParentMood } from "./context/AppContext";
+import { useColors } from "./hooks/useColors";
 
 const MOODS: { id: ParentMood; emoji: string; label: string }[] = [
   { id: "happy", emoji: "😊", label: "Хорошо" },
