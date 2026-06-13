@@ -11,8 +11,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CallRecord, useApp } from "./context/AppContext";
-import { useColors } from "./hooks/useColors";
+import { CallRecord, useApp } from "../context/AppContext";
+import { useColors } from "../hooks/useColors";
 
 function groupByDate(records: CallRecord[]) {
   const today = new Date().toISOString().slice(0, 10);

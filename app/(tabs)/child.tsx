@@ -21,9 +21,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp, type ParentContact, type ParentMood } from "./context/AppContext";
-import { useColors } from "./hooks/useColors";
-import { formatReminderTime } from "./utils/notifications";
+import { useApp, type ParentContact, type ParentMood } from "../context/AppContext";
+import { useColors } from "../hooks/useColors";
+import { formatReminderTime } from "../utils/notifications";
 
 const MOOD_MAP: Record<NonNullable<ParentMood>, { emoji: string; label: string; color: string }> = {
   happy: { emoji: "😊", label: "Хорошо", color: "#5DAA68" },
