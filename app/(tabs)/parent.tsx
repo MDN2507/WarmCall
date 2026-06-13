@@ -16,8 +16,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Audio } from "expo-av";
 
-import { useApp, type ParentMood } from "@/context/AppContext";
-import { useColors } from "@/hooks/useColors";
+import { useApp, type ParentMood } from "../context/AppContext";
+import { useColors } from "../hooks/useColors";
 
 const MOODS: { id: ParentMood; emoji: string; label: string }[] = [
   { id: "happy", emoji: "😊", label: "Хорошо" },
@@ -144,7 +144,7 @@ export default function ParentScreen() {
           staysActiveInBackground: false,
         });
         const { sound: s } = await Audio.Sound.createAsync(
-          require("@/assets/sounds/chime.wav"),
+          require("../assets/sounds/chime.wav"),
           { volume: 0.6, shouldPlay: true }
         );
         sound = s;
@@ -231,7 +231,7 @@ export default function ParentScreen() {
         <View style={styles.avatarSection}>
           <View style={[styles.avatarRing, { borderColor: colors.accent }]}>
             <Image
-              source={childPhotoUri ? { uri: childPhotoUri } : require("@/assets/images/child-placeholder.png")}
+              source={childPhotoUri ? { uri: childPhotoUri } : require("../assets/images/child-placeholder.png")}
               style={styles.avatar}
             />
           </View>

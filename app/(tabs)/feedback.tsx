@@ -11,8 +11,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp } from "@/context/AppContext";
-import { useColors } from "@/hooks/useColors";
+import { useApp } from "../context/AppContext";
+import { useColors } from "../hooks/useColors";
 
 function HeartBurst() {
   const colors = useColors();

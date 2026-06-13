@@ -16,8 +16,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp } from "@/context/AppContext";
-import { useColors } from "@/hooks/useColors";
+import { useApp } from "../context/AppContext";
+import { useColors } from "../hooks/useColors";
 
 const { width, height } = Dimensions.get("window");
 
@@ -87,7 +87,7 @@ function HeroSlide({ slide }: { slide: typeof SLIDES[0] }) {
     <View style={styles.slide}>
       <View style={styles.heroImageContainer}>
         <Image
-          source={require("@/assets/images/hero.jpg")}
+          source={require("../assets/images/hero.jpg")}
           style={styles.heroImage}
           resizeMode="cover"
         />

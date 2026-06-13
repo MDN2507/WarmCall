@@ -21,9 +21,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp, type ParentContact, type ParentMood } from "@/context/AppContext";
-import { useColors } from "@/hooks/useColors";
-import { formatReminderTime } from "@/utils/notifications";
+import { useApp, type ParentContact, type ParentMood } from "../context/AppContext";
+import { useColors } from "../hooks/useColors";
+import { formatReminderTime } from "../utils/notifications";
 
 const MOOD_MAP: Record<NonNullable<ParentMood>, { emoji: string; label: string; color: string }> = {
   happy: { emoji: "😊", label: "Хорошо", color: "#5DAA68" },
@@ -438,7 +438,7 @@ export default function ChildScreen() {
           staysActiveInBackground: false,
         });
         const { sound: s } = await Audio.Sound.createAsync(
-          require("@/assets/sounds/chime-child.wav"),
+          require("../assets/sounds/chime-child.wav"),
           { volume: 0.55, shouldPlay: true }
         );
         sound = s;

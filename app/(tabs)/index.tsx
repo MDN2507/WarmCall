@@ -13,8 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp } from "@/context/AppContext";
-import { useColors } from "@/hooks/useColors";
+import { useApp } from "../context/AppContext";
+import { useColors } from "../hooks/useColors";
 
 const { width, height } = Dimensions.get("window");
 const HERO_HEIGHT = height * 0.52;
@@ -123,7 +123,7 @@ export default function WelcomeScreen() {
       <View style={styles.heroContainer}>
         <Animated.View style={[styles.heroImageWrapper, { transform: [{ scale: heroScale }] }]}>
           <Image
-            source={require("@/assets/images/hero.jpg")}
+            source={require("../assets/images/hero.jpg")}
             style={styles.heroImage}
             resizeMode="cover"
           />
@@ -137,7 +137,7 @@ export default function WelcomeScreen() {
 
         <Animated.View style={[styles.heroTitle, { paddingTop: insets.top + 16, opacity: titleOpacity }]}>
           <View style={[styles.appBadge, { backgroundColor: "rgba(255,248,240,0.88)" }]}>
-            <Image source={require("@/assets/images/icon.png")} style={styles.badgeIcon} />
+            <Image source={require("../assets/images/icon.png")} style={styles.badgeIcon} />
             <Text style={[styles.badgeText, { color: colors.text, fontFamily: "Nunito_800ExtraBold" }]}>
               Тёплый звонок
             </Text>
