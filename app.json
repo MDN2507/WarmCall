@@ -1,13 +1,15 @@
 {
   "expo": {
+    "android": {
+      "package": "com.tor2507.workspace",
+      "versionCode": 3
+    },
+    "entryPoint": "./index.js",
     "extra": {
       "eas": {
-        "projectId": "26bff4e3-dd19-4a4f-997d-1d3f55209f95"
+        "projectId": "8b691cb8-54ad-46ba-af19-774804119f7d"
       }
     },
-    "android": {
-      "package": "com.tor2507.workspace"
-    },
-    "entryPoint": "./index.js"
+    "owner": "irmon"
   }
 }
