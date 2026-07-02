@@ -25,6 +25,15 @@ const MOODS: { id: ParentMood; emoji: string; label: string }[] = [
   { id: "miss", emoji: "🥺", label: "Скучаю" },
 ];
 
+function formatStreakDays(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod100 >= 11 && mod100 <= 14) return "дней";
+  if (mod10 === 1) return "день";
+  if (mod10 >= 2 && mod10 <= 4) return "дня";
+  return "дней";
+}
+
 function getGreeting(): { text: string; icon: string } {
   const h = new Date().getHours();
   if (h >= 5 && h < 12) return { text: "Доброе утро", icon: "☀️" };
@@ -247,7 +256,7 @@ export default function ParentScreen() {
             {currentStreak > 0 && (
               <View style={[styles.statChip, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Text style={[styles.statText, { color: "#fff", fontFamily: "Nunito_700Bold" }]}>
-                  {currentStreak} {currentStreak === 1 ? "день" : "дня"} подряд 🔥
+                  {currentStreak} {formatStreakDays(currentStreak)} подряд 🔥
                 </Text>
               </View>
             )}

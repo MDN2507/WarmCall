@@ -1,15 +1,69 @@
 {
   "expo": {
+    "name": "Тёплый звонок",
+    "slug": "warm-call",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "warmcall",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "entryPoint": "./index.js",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF8F0"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tor2507.workspace"
+    },
     "android": {
       "package": "com.tor2507.workspace",
-      "versionCode": 3
+      "versionCode": 3,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#FFF8F0"
+      },
+      "permissions": [
+        "android.permission.CALL_PHONE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
-    "entryPoint": "./index.js",
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      "expo-av",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FFB347"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "owner": "irmon",
     "extra": {
       "eas": {
-        "projectId": "8b691cb8-54ad-46ba-af19-774804119f7d"
+        "projectId": "f396d14c-22fe-4260-aed8-fc421dcdf194"
       }
-    },
-    "owner": "irmon"
+    }
   }
 }

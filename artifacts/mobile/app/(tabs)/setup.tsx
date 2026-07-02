@@ -166,7 +166,7 @@ export default function SetupScreen() {
   const isEdit = params.edit === "1";
   const {
     role,
-    contacts, addContact,
+    contacts, addContact, updateContact,
     parentPhone, setParentPhone,
     childName, setChildName,
     childPhotoUri, setChildPhotoUri,
@@ -191,7 +191,11 @@ export default function SetupScreen() {
       setParentPhone(localPhone.trim() || "+7 900 000 0000");
       setChildName(localChildName.trim() || "Маша");
       if (firstContact) {
-        // Update existing via profile
+        updateContact(firstContact.id, {
+          name: localContactName.trim() || "Мама",
+          phone: localPhone.trim() || "+7 900 000 0000",
+          photoUri: localContactPhoto,
+        });
       } else {
         addContact({
           name: localContactName.trim() || "Мама",

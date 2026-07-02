@@ -110,48 +110,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
+      .then(async (raw) => {
+        let reminderToSchedule: {
+          hour: number;
+          minute: number;
+          contactName: string;
+        } | null = null;
+
         if (!raw) {
-          // Try migrating from old key
-          return AsyncStorage.getItem("warm_call_state").then((oldRaw) => {
-            if (!oldRaw) return;
-            const old = JSON.parse(oldRaw);
-            if (old.role) setRoleState(old.role);
-            if (old.childName) setChildNameState(old.childName);
-            if (old.childPhotoUri) setChildPhotoUriState(old.childPhotoUri);
-            if (old.parentPhone) setParentPhoneState(old.parentPhone);
-            if (old.hasSeenOnboarding) setHasSeenOnboarding(old.hasSeenOnboarding);
-            if (old.hasPendingNotification) setHasPendingNotification(old.hasPendingNotification);
-            if (old.pendingMessage) setPendingMessage(old.pendingMessage);
-            if (old.parentMood) setParentMoodState(old.parentMood);
-            if (typeof old.reminderEnabled === "boolean") setReminderEnabled(old.reminderEnabled);
-            if (typeof old.reminderHour === "number") setReminderHour(old.reminderHour);
-            if (typeof old.reminderMinute === "number") setReminderMinute(old.reminderMinute);
-            // Migrate old call history (parentName → contactName)
-            if (Array.isArray(old.callHistory)) {
-              setCallHistory(old.callHistory.map((r: { id: string; date: string; parentName?: string; contactName?: string; note?: string }) => ({
-                ...r,
-                contactName: r.contactName ?? r.parentName ?? "Мама",
-              })));
-            }
-            // Migrate single parent contact
-            if (old.parentName) {
-              setContacts([{
+          const oldRaw = await AsyncStorage.getItem("warm_call_state");
+          if (!oldRaw) return;
+
+          const old = JSON.parse(oldRaw);
+          if (old.role) setRoleState(old.role);
+          if (old.childName) setChildNameState(old.childName);
+          if (old.childPhotoUri) setChildPhotoUriState(old.childPhotoUri);
+          if (old.parentPhone) setParentPhoneState(old.parentPhone);
+          if (old.hasSeenOnboarding) setHasSeenOnboarding(old.hasSeenOnboarding);
+          if (old.hasPendingNotification) setHasPendingNotification(old.hasPendingNotification);
+          if (old.pendingMessage) setPendingMessage(old.pendingMessage);
+          if (old.parentMood) setParentMoodState(old.parentMood);
+          if (typeof old.reminderEnabled === "boolean") setReminderEnabled(old.reminderEnabled);
+          if (typeof old.reminderHour === "number") setReminderHour(old.reminderHour);
+          if (typeof old.reminderMinute === "number") setReminderMinute(old.reminderMinute);
+
+          if (Array.isArray(old.callHistory)) {
+            setCallHistory(old.callHistory.map((r: { id: string; date: string; parentName?: string; contactName?: string; note?: string }) => ({
+              ...r,
+              contactName: r.contactName ?? r.parentName ?? "Мама",
+            })));
+          }
+
+          const migratedContacts: ParentContact[] = old.parentName
+            ? [{
                 id: makeId(),
                 name: old.parentName,
                 phone: old.parentPhone || "+7 900 000 0000",
                 photoUri: old.parentPhotoUri || null,
                 relation: "Родитель",
-              }]);
-            }
-          });
+              }]
+            : [];
+          if (migratedContacts.length > 0) setContacts(migratedContacts);
+
+          if (old.reminderEnabled) {
+            reminderToSchedule = {
+              hour: typeof old.reminderHour === "number" ? old.reminderHour : 19,
+              minute: typeof old.reminderMinute === "number" ? old.reminderMinute : 0,
+              contactName: migratedContacts[0]?.name ?? "мамой",
+            };
+          }
+
+          if (reminderToSchedule) {
+            await scheduleDailyReminder(
+              reminderToSchedule.hour,
+              reminderToSchedule.minute,
+              reminderToSchedule.contactName
+            );
+          }
+          return;
         }
+
         const s = JSON.parse(raw);
         if (s.role) setRoleState(s.role);
         if (s.childName) setChildNameState(s.childName);
         if (s.childPhotoUri) setChildPhotoUriState(s.childPhotoUri);
         if (s.parentPhone) setParentPhoneState(s.parentPhone);
-        if (Array.isArray(s.contacts)) setContacts(s.contacts);
+        const loadedContacts: ParentContact[] = Array.isArray(s.contacts) ? s.contacts : [];
+        if (loadedContacts.length > 0) setContacts(loadedContacts);
         if (s.parentMood) setParentMoodState(s.parentMood);
         if (s.hasSeenOnboarding) setHasSeenOnboarding(s.hasSeenOnboarding);
         if (s.hasPendingNotification) setHasPendingNotification(s.hasPendingNotification);
@@ -160,6 +185,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (typeof s.reminderEnabled === "boolean") setReminderEnabled(s.reminderEnabled);
         if (typeof s.reminderHour === "number") setReminderHour(s.reminderHour);
         if (typeof s.reminderMinute === "number") setReminderMinute(s.reminderMinute);
+
+        if (s.reminderEnabled) {
+          reminderToSchedule = {
+            hour: typeof s.reminderHour === "number" ? s.reminderHour : 19,
+            minute: typeof s.reminderMinute === "number" ? s.reminderMinute : 0,
+            contactName: loadedContacts[0]?.name ?? "мамой",
+          };
+        }
+
+        if (reminderToSchedule) {
+          await scheduleDailyReminder(
+            reminderToSchedule.hour,
+            reminderToSchedule.minute,
+            reminderToSchedule.contactName
+          );
+        }
       })
       .finally(() => setIsLoaded(true));
   }, []);
