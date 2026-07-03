@@ -10,7 +10,7 @@ import React, {
 import {
   cancelDailyReminder,
   scheduleDailyReminder,
-} from "@/utils/notifications";
+} from "../utils/notifications";
 
 export interface CallRecord {
   id: string;
