@@ -55,7 +55,6 @@
     "@expo-google-fonts/nunito": "^0.4.2",
     "expo-audio": "^56.0.11",
     "expo-av": "~16.0.8",
-    "expo-modules-core": "3.0.30",
     "expo-notifications": "^0.32.17"
   }
 }

@@ -7,13 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "warmcall",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "entryPoint": "./index.js",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFF8F0"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.tor2507.workspace"
@@ -55,14 +48,8 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
-    "owner": "irmon",
-    "extra": {
-      "eas": {
-        "projectId": "f396d14c-22fe-4260-aed8-fc421dcdf194"
-      }
-    }
+    "owner": "irmon"
   }
 }
