@@ -100,6 +100,9 @@ importers:
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      '@react-native/codegen':
+        specifier: 0.85.3
+        version: 0.85.3
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.101.2(react@19.2.3)

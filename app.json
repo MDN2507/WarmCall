@@ -50,6 +50,14 @@
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "irmon"
+    "owner": "irmon",
+    "extra": {
+      "router": {
+        "origin": "https://replit.com/"
+      },
+      "eas": {
+        "projectId": "f396d14c-22fe-4260-aed8-fc421dcdf194"
+      }
+    }
   }
 }
