@@ -13,15 +13,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CallRecord, useApp } from "../context/AppContext";
 import { useColors } from "../hooks/useColors";
+import { localDateKey } from "../utils/dates";
 
 function groupByDate(records: CallRecord[]) {
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
+  const yesterday = localDateKey(new Date(Date.now() - 86400000));
   const groups: { label: string; items: CallRecord[] }[] = [];
   const map: Record<string, CallRecord[]> = {};
 
   for (const r of records) {
-    const day = r.date.slice(0, 10);
+    const day = localDateKey(r.date);
     if (!map[day]) map[day] = [];
     map[day].push(r);
   }

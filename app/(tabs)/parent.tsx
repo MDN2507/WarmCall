@@ -18,6 +18,7 @@ import { Audio } from "expo-av";
 
 import { useApp, type ParentMood } from "../context/AppContext";
 import { useColors } from "../hooks/useColors";
+import { localDateKey } from "../utils/dates";
 
 const MOODS: { id: ParentMood; emoji: string; label: string }[] = [
   { id: "happy", emoji: "😊", label: "Хорошо" },
@@ -45,9 +46,9 @@ function getGreeting(): { text: string; icon: string } {
 function formatLastCall(dateStr: string): string {
   const d = new Date(dateStr);
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const yestStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const dayStr = d.toISOString().slice(0, 10);
+  const todayStr = localDateKey(now);
+  const yestStr = localDateKey(new Date(Date.now() - 86400000));
+  const dayStr = localDateKey(d);
   const time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
   if (dayStr === todayStr) return `Сегодня в ${time}`;
   if (dayStr === yestStr) return `Вчера в ${time}`;

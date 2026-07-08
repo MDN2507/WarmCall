@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -11,6 +12,7 @@ import {
   cancelDailyReminder,
   scheduleDailyReminder,
 } from "../utils/notifications";
+import { localDateKey } from "../utils/dates";
 
 export interface CallRecord {
   id: string;
@@ -74,10 +76,10 @@ const STORAGE_KEY = "warm_call_state_v2";
 function computeStreak(history: CallRecord[]): number {
   if (history.length === 0) return 0;
   const days = Array.from(
-    new Set(history.map((r) => r.date.slice(0, 10)))
+    new Set(history.map((r) => localDateKey(r.date)))
   ).sort((a, b) => b.localeCompare(a));
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
+  const yesterday = localDateKey(new Date(Date.now() - 86400000));
   if (days[0] !== today && days[0] !== yesterday) return 0;
   let streak = 1;
   for (let i = 1; i < days.length; i++) {
@@ -205,20 +207,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoaded(true));
   }, []);
 
-  const persist = useCallback(
-    (updates: Record<string, unknown>) => {
-      const current = {
-        role, childName, childPhotoUri, parentPhone,
-        contacts, parentMood, hasSeenOnboarding,
-        hasPendingNotification, pendingMessage, callHistory,
-        reminderEnabled, reminderHour, reminderMinute,
-        ...updates,
-      };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(current));
-    },
-    [role, childName, childPhotoUri, parentPhone, contacts, parentMood, hasSeenOnboarding,
-      hasPendingNotification, pendingMessage, callHistory, reminderEnabled, reminderHour, reminderMinute]
-  );
+  // Keeps the *actual* latest persisted state, so several setter calls made
+  // back-to-back in the same handler (e.g. handleSave in profile.tsx/setup.tsx)
+  // don't clobber each other with stale values from render-time closures.
+  const stateRef = useRef({
+    role, childName, childPhotoUri, parentPhone,
+    contacts, parentMood, hasSeenOnboarding,
+    hasPendingNotification, pendingMessage, callHistory,
+    reminderEnabled, reminderHour, reminderMinute,
+  });
+
+  // Keep the ref in sync after every render too (covers state changes that
+  // didn't go through `persist`, e.g. the initial load from storage).
+  useEffect(() => {
+    stateRef.current = {
+      role, childName, childPhotoUri, parentPhone,
+      contacts, parentMood, hasSeenOnboarding,
+      hasPendingNotification, pendingMessage, callHistory,
+      reminderEnabled, reminderHour, reminderMinute,
+    };
+  });
+
+  const persist = useCallback((updates: Record<string, unknown>) => {
+    const current = { ...stateRef.current, ...updates };
+    stateRef.current = current as typeof stateRef.current;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+  }, []);
 
   const setRole = useCallback((r: "parent" | "child" | null) => { setRoleState(r); persist({ role: r }); }, [persist]);
   const setChildName = useCallback((n: string) => { setChildNameState(n); persist({ childName: n }); }, [persist]);

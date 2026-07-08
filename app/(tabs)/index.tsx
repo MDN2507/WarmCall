@@ -78,13 +78,20 @@ export default function WelcomeScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { setRole, hasSeenOnboarding, isLoaded } = useApp();
+  const { setRole, role, hasSeenOnboarding, isLoaded } = useApp();
 
   useEffect(() => {
-    if (isLoaded && !hasSeenOnboarding) {
+    if (!isLoaded) return;
+    if (!hasSeenOnboarding) {
       router.replace("/(tabs)/onboarding");
+    } else if (role === "parent") {
+      router.replace("/(tabs)/parent");
+    } else if (role === "child") {
+      router.replace("/(tabs)/child");
     }
-  }, [isLoaded, hasSeenOnboarding]);
+    // if hasSeenOnboarding but role is null (shouldn't normally happen),
+    // fall through and show the Welcome/role-picker screen below.
+  }, [isLoaded, hasSeenOnboarding, role]);
 
   const heroScale = useRef(new Animated.Value(1.06)).current;
   const panelSlide = useRef(new Animated.Value(40)).current;
