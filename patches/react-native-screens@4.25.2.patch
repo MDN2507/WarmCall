@@ -1,0 +1,11 @@
+--- a/node_modules/react-native-screens/src/fabric/tabs/TabsBottomAccessoryNativeComponent.ts
++++ b/node_modules/react-native-screens/src/fabric/tabs/TabsBottomAccessoryNativeComponent.ts
+@@ -2,7 +2,7 @@
+ import { codegenNativeComponent } from 'react-native';
+ import type { CodegenTypes as CT, ViewProps } from 'react-native';
+ type EnvironmentChangeEvent = {
+-  environment: 'regular' | 'inline';
++  environment: string;
+ };
+ export interface NativeProps extends ViewProps {
+   onEnvironmentChange?:
