@@ -9,7 +9,7 @@
     "typecheck:libs": "tsc --build",
     "typecheck:app": "tsc -p tsconfig.app.json --noEmit",
     "typecheck": "pnpm run typecheck:libs && pnpm run typecheck:app && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "postinstall": "node scripts/fix-screens-codegen.js"
+    "postinstall": "node scripts/fix-screens-codegen.cjs"
   },
   "private": true,
   "expo": {
