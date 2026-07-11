@@ -8,7 +8,8 @@
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck:app": "tsc -p tsconfig.app.json --noEmit",
-    "typecheck": "pnpm run typecheck:libs && pnpm run typecheck:app && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm run typecheck:app && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "postinstall": "node scripts/fix-screens-codegen.js"
   },
   "private": true,
   "expo": {
